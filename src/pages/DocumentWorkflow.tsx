@@ -76,9 +76,12 @@ export default function DocumentWorkflow() {
   }
   return (
     <>
-      <Link to="/workspace/runs" className="breadcrumb-back">
+      <Link
+        to={`/workspace/chats/${task.conversationId ?? task.id}`}
+        className="breadcrumb-back"
+      >
         <ArrowLeft size={13} />
-        All agent runs<span>/</span>
+        Back to conversation<span>/</span>
         <span className="mono">{task.id.toUpperCase()}</span>
       </Link>
       <PageHeader
@@ -227,7 +230,9 @@ export default function DocumentWorkflow() {
                 )}
               </div>
             </section>
-            <SovereigntyConsole task={task} />
+            {['running', 'queued'].includes(task.status) && (
+              <SovereigntyConsole task={task} />
+            )}
           </div>
         </TabsContent>
         <TabsContent value="output">
@@ -321,10 +326,7 @@ export default function DocumentWorkflow() {
             </span>
             <span>
               <b>AUDIT REFERENCE</b>
-              <Link to={`/workspace/audit?task=${task.id}`}>
-                {task.id}
-                <ArrowUpRight size={12} />
-              </Link>
+              <span>{task.id}</span>
             </span>
             <span>
               <b>CLASSIFICATION</b>Synthetic / for review

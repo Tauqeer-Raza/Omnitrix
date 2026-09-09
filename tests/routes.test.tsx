@@ -1,10 +1,18 @@
 import { beforeEach, describe, it, expect } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+  within,
+  act,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import App from '../src/App';
 import { createSeed } from '../src/api/seed';
-import { initializeStore, updateStore } from '../src/api/store';
+import { initializeStore, updateStore, getStore } from '../src/api/store';
+import { advanceMockTasks } from '../src/api/events';
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
@@ -34,17 +42,19 @@ describe('rendered routes and primary controls', () => {
     await userEvent.click(
       screen.getByRole('button', { name: 'Sign in securely' }),
     );
-    await screen.findByRole('heading', { name: 'Good morning, operator.' });
-    expect(screen.getByRole('textbox', { name: 'Task request' })).toBeTruthy();
+    await screen.findByRole('heading', { name: 'What can I help you with?' });
+    expect(
+      screen.getByRole('textbox', { name: 'Message Omnitrix' }),
+    ).toBeTruthy();
   });
   it('blocks an operator from administrative pages', async () => {
     open('/admin/models', 'usr-01');
-    await screen.findByRole('heading', { name: 'Good morning, operator.' });
+    await screen.findByRole('heading', { name: 'What can I help you with?' });
     expect(screen.queryByRole('heading', { name: 'Local models' })).toBeNull();
   });
   it('keeps navigation collapsed when the operator toggles it', async () => {
     open('/workspace', 'usr-01');
-    await screen.findByRole('heading', { name: 'Good morning, operator.' });
+    await screen.findByRole('heading', { name: 'What can I help you with?' });
     await userEvent.click(
       screen.getByRole('button', { name: 'Toggle Sidebar' }),
     );
@@ -53,7 +63,8 @@ describe('rendered routes and primary controls', () => {
     );
   });
   it.each([
-    ['/workspace/new', 'New task', 'usr-01'],
+    ['/workspace/new', 'What can I help you with?', 'usr-01'],
+    ['/workspace/chats/tsk-1048', 'Inspection Report Analysis', 'usr-01'],
     ['/workspace/documents', 'Document library', 'usr-01'],
     ['/workspace/documents/doc-01', 'Inspection Report Analysis', 'usr-01'],
     ['/workspace/code', 'Code tasks', 'usr-01'],
@@ -61,7 +72,7 @@ describe('rendered routes and primary controls', () => {
     ['/workspace/knowledge', 'Knowledge base', 'usr-01'],
     ['/workspace/runs', 'Agent runs', 'usr-01'],
     ['/workspace/runs/tsk-1048', 'Inspection Report Analysis', 'usr-01'],
-    ['/workspace/audit', 'Audit log', 'usr-01'],
+    ['/workspace/audit', 'What can I help you with?', 'usr-01'],
     ['/workspace/system', 'System status', 'usr-01'],
     ['/admin', 'Control center', 'usr-admin'],
     ['/admin/resources', 'Resource usage', 'usr-admin'],
@@ -99,22 +110,133 @@ describe('rendered routes and primary controls', () => {
     ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Download PDF' })).toBeTruthy();
   });
-  it('creates a document task from the visible form using the sample report', async () => {
+  it('routes an attached report automatically and displays activity alongside the conversation', async () => {
     open('/workspace/new', 'usr-01');
-    await screen.findByRole('heading', { name: 'New task' });
+    await screen.findByRole('heading', { name: 'What can I help you with?' });
     await userEvent.type(
-      screen.getByLabelText('What would you like Omnitrix to accomplish?'),
+      screen.getByLabelText('Message Omnitrix'),
       'Prepare a synthetic inspection summary with source references.',
     );
+    await userEvent.click(screen.getByRole('button', { name: 'Attach files' }));
     await userEvent.click(
-      screen.getByRole('button', { name: 'Use sample report' }),
+      screen.getByRole('button', { name: 'Try with a sample report' }),
     );
     await screen.findByText('Inspection Report.pdf');
-    await userEvent.click(screen.getByRole('button', { name: 'Start task' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Send message' }));
     await screen.findByRole('heading', {
       name: 'Prepare a synthetic inspection summary with source references',
     });
-    expect(screen.getByText('AGENT ACTIVITY')).toBeTruthy();
+    expect(getStore().tasks[0].type).toBe('document');
+    expect(
+      screen.getByRole('complementary', { name: 'Task activity' }),
+    ).toBeTruthy();
+    expect(screen.getByText('SOVEREIGNTY CONSOLE')).toBeTruthy();
+  });
+  it('offers a quiet landing page with chat history, resource allocation and navbar capabilities', async () => {
+    open('/workspace', 'usr-01');
+    await screen.findByRole('heading', { name: 'What can I help you with?' });
+    const nav = within(
+      screen.getByRole('navigation', { name: 'Workspace navigation' }),
+    );
+    expect(nav.getByRole('link', { name: 'Knowledge Base' })).toBeTruthy();
+    expect(nav.getByRole('link', { name: 'Agent Runs' })).toBeTruthy();
+    expect(
+      screen.getByRole('navigation', { name: 'Previous chats' }),
+    ).toBeTruthy();
+    expect(screen.getByText('tokens remaining')).toBeTruthy();
+    expect(screen.getByText('Used')).toBeTruthy();
+    expect(screen.queryByText('SOVEREIGNTY CONSOLE')).toBeNull();
+    expect(screen.queryByRole('link', { name: /Audit log/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Documents' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Code tasks' })).toBeNull();
+    expect(screen.queryByRole('combobox')).toBeNull();
+    await userEvent.click(
+      screen.getByRole('button', { name: /Prepare a note/ }),
+    );
+    expect(
+      (
+        screen.getByRole('textbox', {
+          name: 'Message Omnitrix',
+        }) as HTMLTextAreaElement
+      ).value,
+    ).toContain('shift handover');
+    expect(screen.getByRole('textbox', { name: 'Message Omnitrix' })).toBe(
+      document.activeElement,
+    );
+  });
+  it('keeps follow-ups together, updates tokens, and only reveals completed activity on request', async () => {
+    open('/workspace', 'usr-01');
+    const input = await screen.findByRole('textbox', {
+      name: 'Message Omnitrix',
+    });
+    const used = getStore().users.find((u) => u.id === 'usr-01')!.used;
+    fireEvent.change(input, {
+      target: { value: 'Help me prepare a shift handover note' },
+    });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await screen.findByRole('heading', {
+      name: 'Help me prepare a shift handover note',
+    });
+    const root = getStore().tasks[0];
+    expect(root.type).toBe('general');
+    expect(
+      (
+        screen.getByRole('textbox', {
+          name: 'Message Omnitrix',
+        }) as HTMLTextAreaElement
+      ).disabled,
+    ).toBe(true);
+    await act(async () => {
+      for (let i = 0; i < 8; i++) advanceMockTasks();
+    });
+    await screen.findByText(/Here’s a simple structure/);
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('complementary', { name: 'Task activity' }),
+      ).toBeNull(),
+    );
+    expect(getStore().users.find((u) => u.id === 'usr-01')!.used).toBe(
+      used + 2400,
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'View activity' }),
+    );
+    expect(
+      screen.getByRole('complementary', { name: 'Task activity' }),
+    ).toBeTruthy();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Hide activity' }),
+    );
+    fireEvent.change(
+      screen.getByRole('textbox', { name: 'Message Omnitrix' }),
+      { target: { value: 'Make it shorter' } },
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Send message' }));
+    await waitFor(() =>
+      expect(getStore().tasks[0].prompt).toBe('Make it shorter'),
+    );
+    expect(getStore().tasks[0].conversationId).toBe(root.id);
+    await act(async () => {
+      for (let i = 0; i < 8; i++) advanceMockTasks();
+    });
+    await screen.findByText(/Here is a shorter version/);
+    const history = within(
+      screen.getByRole('navigation', { name: 'Previous chats' }),
+    );
+    expect(history.getAllByRole('link', { name: root.title })).toHaveLength(1);
+    await userEvent.click(screen.getAllByRole('link', { name: 'New chat' })[0]);
+    await screen.findByRole('heading', { name: 'What can I help you with?' });
+    expect(screen.queryByText('Make it shorter')).toBeNull();
+    await userEvent.click(
+      within(
+        screen.getByRole('navigation', { name: 'Previous chats' }),
+      ).getByRole('link', { name: root.title }),
+    );
+    await screen.findByText('Make it shorter');
+    expect(screen.getByText(/Here is a shorter version/)).toBeTruthy();
+    expect(
+      screen.queryByRole('complementary', { name: 'Task activity' }),
+    ).toBeNull();
   });
   it('updates model state through the model registry toggle', async () => {
     open('/admin/models', 'usr-admin');

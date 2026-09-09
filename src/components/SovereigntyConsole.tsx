@@ -1,6 +1,5 @@
 import {
   ShieldCheck,
-  ArrowDown,
   Check,
   Radio,
   Waypoints,
@@ -29,7 +28,9 @@ export default function SovereigntyConsole({
         <span className="eyebrow">SOVEREIGNTY CONSOLE</span>
         <span className="live-label">
           <i />
-          LIVE
+          {task && !['running', 'queued'].includes(task.status)
+            ? 'RECORDED'
+            : 'LIVE'}
         </span>
       </div>
       <div className="console-network">
@@ -106,14 +107,12 @@ export default function SovereigntyConsole({
             </div>
             <div className="trace-feed">
               {(task?.events.length
-                ? task.events
-                    .slice(-6)
-                    .map((e) => ({
-                      id: e.id,
-                      timestamp: e.timestamp,
-                      action: e.type,
-                      status: e.status,
-                    }))
+                ? task.events.slice(-6).map((e) => ({
+                    id: e.id,
+                    timestamp: e.timestamp,
+                    action: e.type,
+                    status: e.status,
+                  }))
                 : data.audit.slice(0, 6).reverse()
               ).map((e) => (
                 <div

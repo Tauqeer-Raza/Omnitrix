@@ -90,7 +90,9 @@ export interface Task {
   id: string;
   title: string;
   prompt: string;
-  type: 'document' | 'code';
+  type: 'document' | 'code' | 'general';
+  conversationId?: string;
+  reply?: string;
   status: 'completed' | 'running' | 'queued' | 'failed';
   ownerId: string;
   documentIds: string[];
@@ -163,5 +165,15 @@ export const CODE_STEPS = [
   'Sandbox started',
   'Test 1 passed',
   'Test 2 passed',
+  'Complete',
+];
+export const GENERAL_STEPS = [
+  'Request received',
+  'Understanding your request',
+  'Choosing local tools',
+  'Checking the request',
+  'Finding useful context',
+  'Preparing your response',
+  'Reviewing the response',
   'Complete',
 ];

@@ -8,13 +8,10 @@ import {
   Globe,
   ArrowUpRight,
   Server,
-  GitBranch,
   ShieldCheck,
-  Users,
 } from 'lucide-react';
 import { useApp } from '../../state/AppContext';
 import {
-  Button,
   PageHeader,
   MetricCard,
   Counter,

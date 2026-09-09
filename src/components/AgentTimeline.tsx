@@ -1,8 +1,13 @@
 import { Check, LoaderCircle, Circle, AlertTriangle } from 'lucide-react';
 import type { Task } from '../types';
-import { CODE_STEPS, DOCUMENT_STEPS } from '../types';
+import { CODE_STEPS, DOCUMENT_STEPS, GENERAL_STEPS } from '../types';
 export default function AgentTimeline({ task }: { task: Task }) {
-  const steps = task.type === 'code' ? CODE_STEPS : DOCUMENT_STEPS;
+  const steps =
+    task.type === 'code'
+      ? CODE_STEPS
+      : task.type === 'general'
+        ? GENERAL_STEPS
+        : DOCUMENT_STEPS;
   return (
     <ol className="agent-timeline">
       {steps.map((step, i) => {

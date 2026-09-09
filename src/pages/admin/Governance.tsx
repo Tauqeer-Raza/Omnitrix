@@ -1,32 +1,23 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   Plus,
   ArrowUpRight,
   ArrowLeft,
-  Users,
   ShieldCheck,
   Save,
   KeyRound,
-  FileText,
-  Database,
-  SquareCode,
-  Gauge,
-  Check,
-  Settings,
-  AlertTriangle,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { useApp } from '../../state/AppContext';
 import { userApi } from '../../api/users';
 import { systemApi } from '../../api/system';
-import { authApi } from '../../api/auth';
+
 import {
   MODEL_GROUPS,
   type User,
   type Permission,
-  type ModelGroup,
   type Settings as SettingsType,
 } from '../../types';
 import {
@@ -102,7 +93,11 @@ export function UsersPage() {
           .map((u) => ({
             id: u.id,
             cells: [
-              <Link className="user-cell" to={`/admin/users/${u.id}`}>
+              <Link
+                key="cell-0"
+                className="user-cell"
+                to={`/admin/users/${u.id}`}
+              >
                 <span className="avatar">
                   {u.name
                     .split(' ')
@@ -115,13 +110,28 @@ export function UsersPage() {
                   <small>{u.email}</small>
                 </span>
               </Link>,
-              <span className="badge-outline">{u.role.toUpperCase()}</span>,
+              <span key="cell-1" className="badge-outline">
+                {u.role.toUpperCase()}
+              </span>,
               u.department,
-              <span className="mono">{number(u.dailyLimit)}</span>,
-              <span className="mono">{u.modelAccess.length} / 4 GROUPS</span>,
-              <StatusBadge status={u.enabled ? 'online' : 'disabled'} />,
-              <span className="mono">{dateTime(u.lastActivity)}</span>,
-              <Link to={`/admin/users/${u.id}`} aria-label={`Manage ${u.name}`}>
+              <span key="cell-3" className="mono">
+                {number(u.dailyLimit)}
+              </span>,
+              <span key="cell-4" className="mono">
+                {u.modelAccess.length} / 4 GROUPS
+              </span>,
+              <StatusBadge
+                key="cell-5"
+                status={u.enabled ? 'online' : 'disabled'}
+              />,
+              <span key="cell-6" className="mono">
+                {dateTime(u.lastActivity)}
+              </span>,
+              <Link
+                key="cell-7"
+                to={`/admin/users/${u.id}`}
+                aria-label={`Manage ${u.name}`}
+              >
                 <ArrowUpRight size={15} />
               </Link>,
             ],
@@ -204,7 +214,7 @@ function UserEditor({ user }: { user: User }) {
   const [draft, setDraft] = useState(user);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  async function save(e: FormEvent) {
+  async function save(e: SubmitEvent) {
     e.preventDefault();
     setBusy(true);
     setError('');

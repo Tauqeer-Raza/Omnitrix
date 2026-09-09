@@ -13,9 +13,9 @@ import {
   exportReport,
   exportSupplement,
   reportLines,
-  exportCSV,
 } from '../src/api/exports';
 import { unzipSync, strFromU8 } from 'fflate';
+import { getConversations } from '../src/lib/conversations';
 const operator = () =>
   authApi.login('operator@omnitrix.local', 'Omnitrix@2026');
 const admin = () => authApi.login('admin@omnitrix.local', 'Omnitrix@2026');
@@ -31,6 +31,97 @@ beforeEach(() => {
   sessionStorage.clear();
   initializeStore();
   updateStore((d) => Object.assign(d, createSeed()));
+});
+
+describe('automatic orchestration and conversation history', () => {
+  it('classifies everyday, calculation and attachment requests without a type selector', async () => {
+    await operator();
+    const base = { documentIds: [], scenario: 'normal' as const };
+    const general = await taskApi.createTask({
+      ...base,
+      prompt: 'Help me draft a shift handover note',
+    });
+    const code = await taskApi.createTask({
+      ...base,
+      prompt: 'Calculate pipeline pressure drop',
+    });
+    const document = await taskApi.createTask({
+      ...base,
+      prompt: 'Summarize the findings',
+      documentIds: ['doc-01'],
+    });
+    expect([general.type, code.type, document.type]).toEqual([
+      'general',
+      'code',
+      'document',
+    ]);
+    expect(general.conversationId).toBe(general.id);
+    expect(getStore().models.find((m) => m.id === general.modelId)?.group).toBe(
+      'FAST',
+    );
+    for (let i = 0; i < 8; i++) advanceMockTasks();
+    const result = await taskApi.getTask(general.id);
+    expect(result.status).toBe('completed');
+    expect(result.reply).toContain('simple structure');
+    expect(result.tokens).toBe(2400);
+  });
+  it('inherits attachments and groups follow-ups without duplicating the previous chat', async () => {
+    await operator();
+    const root = await taskApi.createTask({ ...input, type: undefined });
+    for (let i = 0; i < 8; i++) advanceMockTasks();
+    const next = await taskApi.createTask({
+      prompt: 'Make it shorter',
+      documentIds: [],
+      scenario: 'normal',
+      conversationId: root.id,
+    });
+    expect(next.documentIds).toEqual(['doc-01']);
+    expect(next.type).toBe('document');
+    const chat = getConversations(getStore().tasks).find(
+      (c) => c.id === root.id,
+    )!;
+    expect(chat.title).toBe(root.title);
+    expect(chat.tasks.map((t) => t.id)).toEqual([root.id, next.id]);
+    expect(chat.running).toBe(true);
+  });
+  it('rejects overlapping requests and access to another operator’s conversation', async () => {
+    await operator();
+    const root = await taskApi.createTask({ ...input, type: undefined });
+    const followup = {
+      prompt: 'Make it shorter',
+      documentIds: [],
+      scenario: 'normal' as const,
+      conversationId: root.id,
+    };
+    await expect(taskApi.createTask(followup)).rejects.toThrow(
+      'wait for the current',
+    );
+    updateStore((d) => {
+      d.tasks.find((t) => t.id === root.id)!.ownerId = 'usr-02';
+    });
+    await expect(taskApi.createTask(followup)).rejects.toThrow(
+      'another operator',
+    );
+    await expect(
+      taskApi.createTask({ ...followup, conversationId: 'missing-chat' }),
+    ).rejects.toThrow('no longer available');
+  });
+  it('retries only the latest failed message and never a completed response', async () => {
+    await operator();
+    const root = await taskApi.createTask({ ...input, type: undefined });
+    await taskApi.cancel(root.id);
+    const next = await taskApi.createTask({
+      prompt: 'Continue the review',
+      documentIds: [],
+      scenario: 'normal',
+      conversationId: root.id,
+    });
+    await expect(taskApi.retry(root.id)).rejects.toThrow('latest message');
+    for (let i = 0; i < 8; i++) advanceMockTasks();
+    await expect(taskApi.retry(next.id)).rejects.toThrow(
+      'Only stopped or failed',
+    );
+  });
 });
 describe('authentication and service authorization', () => {
   it('derives role from credentials and rejects incorrect passwords', async () => {

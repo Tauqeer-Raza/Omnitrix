@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus,
   FileText,
   ArrowUpRight,
-  Download,
   Trash2,
   BookOpen,
   Search,
@@ -20,7 +19,6 @@ import {
   DataTable,
   StatusBadge,
   Empty,
-  Picker,
   Modal,
   ConfirmModal,
   dateTime,
@@ -64,6 +62,7 @@ export function DocumentsPage() {
           id: d.id,
           cells: [
             <Link
+              key="cell-0"
               className="document-table-name"
               to={`/workspace/documents/${d.id}`}
             >
@@ -75,11 +74,19 @@ export function DocumentsPage() {
                 </small>
               </span>
             </Link>,
-            <span className="badge-outline">{d.type}</span>,
+            <span key="cell-1" className="badge-outline">
+              {d.type}
+            </span>,
             `${(d.size / 1024 / 1024).toFixed(1)} MB`,
-            <StatusBadge status={d.status} />,
-            <span className="mono">{d.updated}</span>,
-            <Link className="text-link" to={`/workspace/documents/${d.id}`}>
+            <StatusBadge key="cell-3" status={d.status} />,
+            <span key="cell-4" className="mono">
+              {d.updated}
+            </span>,
+            <Link
+              key="cell-5"
+              className="text-link"
+              to={`/workspace/documents/${d.id}`}
+            >
               Open
               <ArrowUpRight size={14} />
             </Link>,
@@ -135,18 +142,19 @@ export function CodeTasksPage() {
             id: t.id,
             cells: [
               <Link
+                key="cell-0"
                 className="document-table-name"
                 to={`/workspace/code/${t.id}`}
               >
                 <SquareCode size={20} />
                 <strong>{t.title}</strong>
               </Link>,
-              <StatusBadge status={t.status} />,
-              <span className="mono">
+              <StatusBadge key="cell-1" status={t.status} />,
+              <span key="cell-2" className="mono">
                 {data?.models.find((m) => m.id === t.modelId)?.name}
               </span>,
               dateTime(t.started),
-              <Link to={`/workspace/code/${t.id}`}>
+              <Link key="cell-4" to={`/workspace/code/${t.id}`}>
                 <ArrowUpRight size={16} />
                 <span className="sr-only">Open {t.title}</span>
               </Link>,
@@ -276,6 +284,7 @@ export function KnowledgePage() {
             id: d.id,
             cells: [
               <Link
+                key="cell-0"
                 className="document-table-name"
                 to={`/workspace/documents/${d.id}`}
               >
@@ -283,10 +292,14 @@ export function KnowledgePage() {
                 <strong>{d.name}</strong>
               </Link>,
               d.type,
-              <span className="mono">{d.chunks}</span>,
-              <StatusBadge status={d.status} />,
-              <span className="mono">{d.updated}</span>,
-              <div className="table-actions">
+              <span key="cell-2" className="mono">
+                {d.chunks}
+              </span>,
+              <StatusBadge key="cell-3" status={d.status} />,
+              <span key="cell-4" className="mono">
+                {d.updated}
+              </span>,
+              <div key="cell-5" className="table-actions">
                 <Link
                   className="glass-button"
                   to={`/workspace/documents/${d.id}`}

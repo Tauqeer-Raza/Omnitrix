@@ -122,7 +122,16 @@ export function exportCSV(rows: Record<string, unknown>[], filename: string) {
   if (!rows.length) return;
   const keys = Object.keys(rows[0]);
   const cell = (value: unknown) => {
-    let s = String(value ?? '');
+    let s =
+      typeof value === 'string'
+        ? value
+        : typeof value === 'number' ||
+            typeof value === 'boolean' ||
+            typeof value === 'bigint'
+          ? value.toString()
+          : value == null
+            ? ''
+            : (JSON.stringify(value) ?? '');
     if (/^[=+@-]/.test(s)) s = "'" + s;
     return '"' + s.replaceAll('"', '""') + '"';
   };

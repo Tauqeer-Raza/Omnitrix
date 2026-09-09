@@ -1,0 +1,372 @@
+import { useState, useEffect, useRef } from 'react';
+import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
+import {
+  FileText,
+  ArrowUpRight,
+  BookOpen,
+  Calculator,
+  Check,
+  Activity,
+  Download,
+  Square,
+  RotateCcw,
+  Plus,
+  ShieldCheck,
+} from 'lucide-react';
+import { useApp } from '../state/AppContext';
+import { taskApi } from '../api/tasks';
+import { exportReport } from '../api/exports';
+import type { LocalDocument, Task } from '../types';
+import { getConversations } from '../lib/conversations';
+import { Button, Empty, ErrorMessage } from '../components/common';
+import Core from '../components/Core';
+import ChatComposer from '../components/ChatComposer';
+import ChatActivity, { activityLabel } from '../components/ChatActivity';
+
+const capabilities = [
+  {
+    title: 'Review a document',
+    description: 'Find the key points in a report.',
+    icon: FileText,
+    prompt: 'Review my inspection report and highlight the key findings.',
+  },
+  {
+    title: 'Check a calculation',
+    description: 'Work through the numbers together.',
+    icon: Calculator,
+    prompt:
+      'Calculate the pressure drop for a 120 m pipe with a 0.15 m diameter and 0.025 m³/s flow.',
+  },
+  {
+    title: 'Prepare a note',
+    description: 'Turn your details into a clear draft.',
+    icon: BookOpen,
+    prompt: 'Help me prepare a shift handover note with outstanding actions.',
+  },
+];
+function Answer({ task }: { task: Task }) {
+  const { data, act } = useApp();
+  const [downloading, setDownloading] = useState('');
+  const docs =
+    data?.documents.filter((d) => task.documentIds.includes(d.id)) ?? [];
+  async function download(format: 'docx' | 'pdf') {
+    setDownloading(format);
+    await act(() => exportReport(task, docs, format), 'Document downloaded');
+    setDownloading('');
+  }
+  return (
+    <div className="chat-answer">
+      <div className="chat-answer-brand">
+        <span className="chat-mini-mark">✦</span>
+        <b>Omnitrix</b>
+        <span>Local assistant</span>
+      </div>
+      <div className="chat-answer-text">
+        {(
+          task.reply ??
+          'Your response is ready. Open the result below to review it.'
+        )
+          .split('\n\n')
+          .map((paragraph, i) => (
+            <p key={i}>{paragraph}</p>
+          ))}
+      </div>
+      {task.type !== 'general' && (
+        <div className="chat-result-card">
+          <span className="chat-result-icon">
+            {task.type === 'document' ? (
+              <FileText size={21} />
+            ) : (
+              <Calculator size={21} />
+            )}
+          </span>
+          <div>
+            <b>
+              {task.type === 'document'
+                ? 'Draft inspection review'
+                : 'Calculation & Python example'}
+            </b>
+            <small>Ready for your review</small>
+          </div>
+          <Link
+            to={`/workspace/${task.type === 'code' ? 'code' : 'documents'}/${task.id}`}
+          >
+            Open
+            <ArrowUpRight size={15} />
+          </Link>
+        </div>
+      )}
+      {task.type === 'document' && (
+        <div className="chat-downloads">
+          <Button
+            loading={downloading === 'docx'}
+            onClick={() => void download('docx')}
+          >
+            <Download size={14} />
+            Word
+          </Button>
+          <Button
+            loading={downloading === 'pdf'}
+            onClick={() => void download('pdf')}
+          >
+            <Download size={14} />
+            PDF
+          </Button>
+        </div>
+      )}
+      <p className="chat-demo-note">
+        Demo response · generated from synthetic examples
+      </p>
+    </div>
+  );
+}
+export default function ChatWorkspace() {
+  const { id } = useParams();
+  const location = useLocation();
+  const { data, user, refresh, act } = useApp();
+  const navigate = useNavigate();
+  const [prompt, setPrompt] = useState(
+    (location.state as { prompt?: string } | null)?.prompt ?? '',
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [showActivity, setShowActivity] = useState(false);
+  const messagesEnd = useRef<HTMLDivElement>(null);
+  const current = getConversations(data?.tasks ?? []).find(
+    (c) => c.id === id || c.tasks.some((t) => t.id === id),
+  );
+  const latest = current?.tasks.at(-1);
+  const active = current?.tasks.find((t) =>
+    ['queued', 'running'].includes(t.status),
+  );
+  const showPanel = !!active || (showActivity && !!latest);
+  useEffect(() => {
+    setPrompt((location.state as { prompt?: string } | null)?.prompt ?? '');
+    setError('');
+    setShowActivity(false);
+  }, [id, location.key, location.state]);
+  useEffect(() => {
+    messagesEnd.current?.scrollIntoView({
+      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'auto'
+        : 'smooth',
+      block: 'nearest',
+    });
+  }, [current?.tasks.length, latest?.status]);
+  async function send(documents: LocalDocument[]) {
+    setBusy(true);
+    setError('');
+    try {
+      const task = await taskApi.createTask({
+        prompt,
+        documentIds: documents.map((d) => d.id),
+        scenario: 'normal',
+        conversationId: current?.id,
+      });
+      await refresh();
+      setPrompt('');
+      if (!current)
+        void navigate(`/workspace/chats/${task.conversationId ?? task.id}`);
+      return true;
+    } catch (e) {
+      setError((e as Error).message);
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (!data || !user) return null;
+  if (id && !current)
+    return (
+      <Empty
+        message="This conversation is unavailable."
+        action={
+          <Link className="glass-button" to="/workspace/new">
+            Start a new chat
+          </Link>
+        }
+      />
+    );
+  return (
+    <div
+      className={`chat-workspace ${current ? 'has-conversation' : 'chat-landing'} ${showPanel ? 'with-activity' : ''}`}
+    >
+      <section className="chat-main">
+        {!current ? (
+          <>
+            <div className="chat-welcome">
+              <div className="chat-welcome-core" aria-hidden="true">
+                <Core />
+              </div>
+              <span className="eyebrow">YOUR LOCAL AI ASSISTANT</span>
+              <h1>What can I help you with?</h1>
+              <p>Ask in your own words. Omnitrix will take care of the rest.</p>
+            </div>
+            <ChatComposer
+              prompt={prompt}
+              onPromptChange={setPrompt}
+              onSend={send}
+              busy={busy}
+            />
+            {error && <ErrorMessage message={error} />}
+            <div className="chat-capabilities">
+              <span className="chat-suggestion-label">
+                A FEW WAYS TO GET STARTED
+              </span>
+              <div>
+                {capabilities.map(
+                  ({ title, description, icon: Icon, prompt: example }) => (
+                    <button
+                      key={title}
+                      onClick={() => {
+                        setPrompt(example);
+                        document.getElementById('chat-message')?.focus();
+                      }}
+                    >
+                      <Icon size={19} />
+                      <b>{title}</b>
+                      <p>{description}</p>
+                      <ArrowUpRight size={13} />
+                    </button>
+                  ),
+                )}
+              </div>
+            </div>
+            <div className="chat-welcome-footer">
+              <ShieldCheck size={14} />
+              <span>
+                Your conversations and files stay within your organization.
+              </span>
+            </div>
+          </>
+        ) : (
+          <>
+            <header className="chat-conversation-header">
+              <div>
+                <span className="eyebrow">CONVERSATION</span>
+                <h1>{current.title}</h1>
+              </div>
+              <Link className="glass-button" to="/workspace/new">
+                <Plus size={15} />
+                New chat
+              </Link>
+            </header>
+            <div className="chat-messages" aria-label="Conversation messages">
+              {current.tasks.map((task) => (
+                <div className="chat-exchange" key={task.id}>
+                  <div className="chat-user-message">
+                    <span className="chat-message-label">You</span>
+                    <p>{task.prompt}</p>
+                    {task.documentIds.length > 0 && (
+                      <div className="chat-message-files">
+                        {task.documentIds.map((docId) => (
+                          <Link
+                            key={docId}
+                            to={`/workspace/documents/${docId}`}
+                          >
+                            <FileText size={13} />
+                            {data.documents.find((d) => d.id === docId)?.name ??
+                              'Attached document'}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {task.status === 'completed' ? (
+                    <Answer task={task} />
+                  ) : task.status === 'failed' ? (
+                    <div className="chat-failed">
+                      <ErrorMessage
+                        message={
+                          task.error ?? 'Your request could not be completed.'
+                        }
+                      />
+                      {latest?.id === task.id && (
+                        <Button
+                          onClick={() =>
+                            void act(
+                              () => taskApi.retry(task.id),
+                              'Request restarted',
+                            )
+                          }
+                        >
+                          <RotateCcw size={14} />
+                          Try again
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <div
+                      className="chat-thinking"
+                      role="status"
+                      aria-live="polite"
+                    >
+                      <span className="chat-thinking-dots">
+                        <i />
+                        <i />
+                        <i />
+                      </span>
+                      <span>
+                        {data.settings.offline
+                          ? 'Waiting for the local service…'
+                          : activityLabel(task)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div ref={messagesEnd} />
+            </div>
+            {latest && !active && (
+              <div className="chat-completion-line">
+                <span>
+                  <Check size={13} />
+                  {latest.status === 'completed'
+                    ? 'Completed locally'
+                    : 'Request stopped'}
+                </span>
+                <button
+                  aria-expanded={showActivity}
+                  onClick={() => setShowActivity((v) => !v)}
+                >
+                  <Activity size={13} />
+                  {showActivity ? 'Hide activity' : 'View activity'}
+                </button>
+              </div>
+            )}
+            {active && (
+              <div className="chat-stop-row">
+                <Button
+                  onClick={() =>
+                    void act(() => taskApi.cancel(active.id), 'Request stopped')
+                  }
+                >
+                  <Square size={11} />
+                  Stop response
+                </Button>
+              </div>
+            )}
+            <div className="chat-follow-up">
+              <ChatComposer
+                prompt={prompt}
+                onPromptChange={setPrompt}
+                onSend={send}
+                busy={busy}
+                disabled={!!active}
+                followUp
+              />
+              {error && <ErrorMessage message={error} />}
+              <p>
+                Omnitrix selects the tools automatically. Review important
+                outputs before use.
+              </p>
+            </div>
+          </>
+        )}
+      </section>
+      {showPanel && latest && (
+        <ChatActivity key={active?.id ?? latest.id} task={active ?? latest} />
+      )}
+    </div>
+  );
+}

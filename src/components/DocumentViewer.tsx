@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { documentApi } from '../api/documents';
 import type { LocalDocument } from '../types';
-import { Button, ErrorMessage } from './common';
+import { ErrorMessage } from './common';
 export const SAMPLE_SECTIONS = [
   [
     '1. SCOPE OF EXAMINATION',
@@ -141,15 +141,17 @@ export default function DocumentViewer({
   const [search, setSearch] = useState('');
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
+  const docId = doc?.id;
+  const docSource = doc?.source;
   useEffect(() => {
     setPage(1);
     setUrl('');
     setError('');
-    if (!doc || doc.source === 'sample') return;
+    if (!docId || docSource === 'sample') return;
     let objectUrl = '';
     let cancelled = false;
     documentApi
-      .getFile(doc.id)
+      .getFile(docId)
       .then((blob) => {
         if (cancelled) return;
         if (blob) {
@@ -165,7 +167,7 @@ export default function DocumentViewer({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [doc?.id]);
+  }, [docId, docSource]);
   return (
     <section className="document-viewer">
       <div className="viewer-heading">

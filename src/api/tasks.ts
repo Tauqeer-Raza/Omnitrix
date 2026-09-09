@@ -1,9 +1,9 @@
 import type { Task, Scenario, ModelGroup, Database } from '../types';
 import { endpoint } from './transport';
+import { classifyPrompt } from './orchestrator';
 import {
   authorize,
   own,
-  actor,
   getStore,
   updateStore,
   log,
@@ -69,30 +69,59 @@ export function checkAllocation(data: Database, userId: string, cost = 2400) {
 export const taskApi = {
   createTask: (input: {
     prompt: string;
-    type: 'document' | 'code';
+    type?: 'document' | 'code' | 'general';
     documentIds: string[];
     scenario: Scenario;
     title?: string;
+    conversationId?: string;
   }) =>
     endpoint<Task>('POST', '/tasks', input, () => {
       const user = authorize('tasks');
-      authorize(input.type === 'code' ? 'code' : 'documents');
-      if (input.prompt.trim().length < 12)
+      const history = input.conversationId
+        ? getStore()
+            .tasks.filter(
+              (t) => (t.conversationId ?? t.id) === input.conversationId,
+            )
+            .sort((a, b) => a.started.localeCompare(b.started))
+        : [];
+      if (input.conversationId) {
+        if (!history.length)
+          throw new ApiError(
+            'NOT_FOUND',
+            'This conversation is no longer available.',
+          );
+        own(history[0].ownerId, 'tasks');
+        if (history.some((t) => ['running', 'queued'].includes(t.status)))
+          throw new ApiError(
+            'IN_PROGRESS',
+            'Please wait for the current response before sending another message.',
+          );
+      }
+      const previous = history.at(-1);
+      const documentIds = input.documentIds.length
+        ? input.documentIds
+        : (previous?.documentIds ?? []);
+      const type =
+        input.type ?? classifyPrompt(input.prompt, documentIds, previous);
+      if (type !== 'general') authorize(type === 'code' ? 'code' : 'documents');
+      if (input.prompt.trim().length < (input.type ? 12 : 1))
         throw new ApiError(
           'VALIDATION',
-          'Describe your task in at least 12 characters.',
+          input.type
+            ? 'Describe your task in at least 12 characters.'
+            : 'Write a message to get started.',
         );
       if (input.prompt.length > 8000)
         throw new ApiError(
           'VALIDATION',
           'Keep your task under 8,000 characters.',
         );
-      if (input.type === 'document' && !input.documentIds.length)
+      if (type === 'document' && !documentIds.length)
         throw new ApiError(
           'VALIDATION',
           'Attach at least one document or choose the sample report.',
         );
-      for (const id of input.documentIds) {
+      for (const id of documentIds) {
         const doc = getStore().documents.find((d) => d.id === id);
         if (!doc)
           throw new ApiError(
@@ -102,9 +131,11 @@ export const taskApi = {
         own(doc.ownerId, 'documents');
       }
       const required: ModelGroup[] =
-        input.type === 'document'
+        type === 'document'
           ? ['VISION', 'MASTER', 'LIBRARIAN']
-          : ['MASTER'];
+          : type === 'code'
+            ? ['MASTER']
+            : ['FAST'];
       if (required.some((g) => !user.modelAccess.includes(g)))
         throw new ApiError(
           'FORBIDDEN',
@@ -121,9 +152,9 @@ export const taskApi = {
             .split(/[.!?\n]/)[0]
             .slice(0, 64),
         prompt: input.prompt.trim(),
-        type: input.type,
+        type,
         ownerId: user.id,
-        documentIds: input.documentIds,
+        documentIds,
         status: 'queued',
         step: -1,
         started: new Date().toISOString(),
@@ -134,6 +165,7 @@ export const taskApi = {
         tokens: 0,
         scenario: input.scenario,
       };
+      task.conversationId = input.conversationId ?? task.id;
       updateStore((d) => {
         d.tasks.unshift(task);
         log(d, 'TASK_CREATED', task.title, 'success', task.id);
@@ -159,8 +191,30 @@ export const taskApi = {
       const t = getStore().tasks.find((t) => t.id === id);
       if (!t) throw new ApiError('NOT_FOUND', 'Task not found.');
       own(t.ownerId, 'tasks');
+      if (t.status !== 'failed')
+        throw new ApiError(
+          'VALIDATION',
+          'Only stopped or failed requests can be retried.',
+        );
+      const history = getStore()
+        .tasks.filter(
+          (item) =>
+            (item.conversationId ?? item.id) === (t.conversationId ?? t.id),
+        )
+        .sort((a, b) => a.started.localeCompare(b.started));
+      if (
+        history.at(-1)?.id !== id ||
+        history.some((item) => ['running', 'queued'].includes(item.status))
+      )
+        throw new ApiError(
+          'IN_PROGRESS',
+          'Continue from the latest message in this conversation.',
+        );
       checkAllocation(getStore(), t.ownerId);
-      resolveModel(getStore(), t.type === 'code' ? 'MASTER' : 'VISION');
+      resolveModel(
+        getStore(),
+        t.type === 'code' ? 'MASTER' : t.type === 'general' ? 'FAST' : 'VISION',
+      );
       updateStore((d) => {
         const t = d.tasks.find((t) => t.id === id)!;
         Object.assign(t, {

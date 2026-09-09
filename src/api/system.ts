@@ -1,5 +1,6 @@
 import type { Database, Settings, ComputeNode } from '../types';
 import { endpoint } from './transport';
+import { mockReply } from './orchestrator';
 import {
   actor,
   authorize,
@@ -18,6 +19,11 @@ export const systemApi = {
       () => {
         const user = actor();
         const data = structuredClone(getStore());
+        data.tasks = data.tasks.map((task) =>
+          task.status === 'completed' && !task.reply
+            ? { ...task, reply: mockReply(task) }
+            : task,
+        );
         if (user.role !== 'admin') {
           data.users = data.users.filter((u) => u.id === user.id);
           data.tasks = data.tasks.filter((t) => t.ownerId === user.id);

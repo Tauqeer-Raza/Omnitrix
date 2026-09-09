@@ -18,9 +18,8 @@ import { hasPermission } from './api/auth';
 import type { Permission } from './types';
 import Layout from './components/Layout';
 import { Loading, Empty, Button } from './components/common';
-import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
-const NewTask = lazy(() => import('./pages/NewTask'));
+const ChatWorkspace = lazy(() => import('./pages/ChatWorkspace'));
 const DocumentWorkflow = lazy(() => import('./pages/DocumentWorkflow'));
 const CodeWorkspace = lazy(() => import('./pages/CodeWorkspace'));
 const DocumentsPage = lazy(() =>
@@ -85,6 +84,13 @@ function RunDetail() {
   const { id } = useParams();
   const { data } = useApp();
   const task = data?.tasks.find((t) => t.id === id);
+  if (task?.type === 'general')
+    return (
+      <Navigate
+        to={`/workspace/chats/${task.conversationId ?? task.id}`}
+        replace
+      />
+    );
   return task?.type === 'code' ? <CodeWorkspace /> : <DocumentWorkflow />;
 }
 function ProtectedRoute({
@@ -161,8 +167,9 @@ export default function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Dashboard />} />
-              <Route path="new" element={<NewTask />} />
+              <Route index element={<ChatWorkspace />} />
+              <Route path="new" element={<ChatWorkspace />} />
+              <Route path="chats/:id" element={<ChatWorkspace />} />
               <Route
                 path="documents"
                 element={
@@ -207,11 +214,7 @@ export default function App() {
               <Route path="runs/:id" element={<RunDetail />} />
               <Route
                 path="audit"
-                element={
-                  <ProtectedRoute permission="audit">
-                    <AuditPage />
-                  </ProtectedRoute>
-                }
+                element={<Navigate to="/workspace" replace />}
               />
               <Route path="system" element={<SystemPage />} />
             </Route>

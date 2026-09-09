@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Activity,
   ArrowUpRight,
   Download,
   RefreshCw,
   ShieldCheck,
   Globe,
-  Server,
-  Check,
   Cpu,
   Database,
   ScanLine,
@@ -27,8 +24,6 @@ import {
   SearchField,
   Picker,
   StatusBadge,
-  MetricCard,
-  Counter,
   dateTime,
   number,
 } from '../components/common';
@@ -80,7 +75,7 @@ export function RunsPage() {
             label="Filter task type"
             value={type}
             onChange={setType}
-            options={['all', 'document', 'code']}
+            options={['all', 'document', 'code', 'general']}
           />
         </div>
       </div>
@@ -90,20 +85,28 @@ export function RunsPage() {
           id: t.id,
           cells: [
             <Link
-              to={`/workspace/${t.type === 'code' ? 'code' : 'runs'}/${t.id}`}
+              key="cell-0"
+              to={`/workspace/chats/${t.conversationId ?? t.id}`}
             >
               <strong>{t.title}</strong>
               <small className="cell-subtitle mono">{t.id}</small>
             </Link>,
-            <span className="badge-outline">{t.type.toUpperCase()}</span>,
-            <StatusBadge status={t.status} />,
-            <span className="mono">{dateTime(t.started)}</span>,
-            <span className="mono">{t.duration}s</span>,
+            <span key="cell-1" className="badge-outline">
+              {t.type.toUpperCase()}
+            </span>,
+            <StatusBadge key="cell-2" status={t.status} />,
+            <span key="cell-3" className="mono">
+              {dateTime(t.started)}
+            </span>,
+            <span key="cell-4" className="mono">
+              {t.duration}s
+            </span>,
             <Link
+              key="cell-5"
               className="text-link"
-              to={`/workspace/${t.type === 'code' ? 'code' : 'runs'}/${t.id}`}
+              to={`/workspace/chats/${t.conversationId ?? t.id}`}
             >
-              Inspect
+              Open chat
               <ArrowUpRight size={14} />
             </Link>,
           ],
@@ -228,22 +231,26 @@ export function AuditPage({ admin = false }: { admin?: boolean }) {
             ? ['TIMESTAMP', 'ACTOR', 'ACTION', 'RESOURCE', 'STATUS']
             : ['TIMESTAMP', 'ACTION', 'TASK / RESOURCE', 'STATUS']
         }
-        rows={events
-          .slice((current - 1) * 12, current * 12)
-          .map((e) => ({
-            id: e.id,
-            cells: [
-              <span className="mono">{dateTime(e.timestamp)}</span>,
-              ...(admin ? [e.actor] : []),
-              <span className="audit-action">{e.action}</span>,
-              e.taskId ? (
-                <Link to={`/workspace/runs/${e.taskId}`}>{e.resource}</Link>
-              ) : (
-                e.resource
-              ),
-              <StatusBadge status={e.status} />,
-            ],
-          }))}
+        rows={events.slice((current - 1) * 12, current * 12).map((e) => ({
+          id: e.id,
+          cells: [
+            <span key="cell-0" className="mono">
+              {dateTime(e.timestamp)}
+            </span>,
+            ...(admin ? [e.actor] : []),
+            <span key="cell-2" className="audit-action">
+              {e.action}
+            </span>,
+            e.taskId ? (
+              <Link key="cell-3" to={`/workspace/runs/${e.taskId}`}>
+                {e.resource}
+              </Link>
+            ) : (
+              e.resource
+            ),
+            <StatusBadge key="cell-4" status={e.status} />,
+          ],
+        }))}
       />
       <div className="pagination">
         <span>{events.length} matching events</span>

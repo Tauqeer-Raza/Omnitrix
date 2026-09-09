@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Open http://127.0.0.1:5173. Dependencies and fonts are bundled during setup. The application works without a backend in its default mock mode.
+Open [the local preview](http://127.0.0.1:5173). Dependencies and fonts are bundled during setup. The application works without a backend in its default mock mode.
 
 | Account       | Email                   | Password      |
 | ------------- | ----------------------- | ------------- |
@@ -30,10 +30,10 @@ The production bundle is `dist/`. Serve it from any internal static web server w
 
 ## Demo journeys
 
-1. Sign in as Operator. Select **New task**, choose **Document task**, upload one or more PDF/PNG/JPG/DOCX files (20 MB each, up to 10), or choose **Use sample report**. Enter a task and start it.
-2. Follow the live classification, routing, OCR, retrieval, reasoning, and generation events. Inspect source documents, zoom, pages, and the sovereignty console. Open **Output & deliverables** on completion and download a real Word or PDF file. Excel and PowerPoint exports provide a sample findings register and review deck.
-3. Create a **Coding task**. Inspect/edit the sample Python source, switch to its unit tests, copy/download files, and run sample structure checks. The browser does not execute arbitrary code. Download both Python files to run the real unit tests locally.
-4. Use **Demo simulation options** during task creation to exercise a retrieval or sandbox failure. Retry the failed task to run the successful scenario. In admin **Settings**, simulate a backend outage; reconnect from Settings or System Status.
+1. Sign in as Operator to a simple chat landing page. Type a message or use a capability suggestion, then press **Send** or Enter. Shift+Enter adds a new line. The orchestrator chooses the workflow; the operator never selects a task type.
+2. Use **Attach files** for PDF/PNG/JPG/DOCX inputs (20 MB each, up to 10), or **Try with a sample report**. The activity panel and sovereignty console appear alongside a running request and close when it finishes. Reopen them with **View activity**. Open a generated result or download Word/PDF from the answer; Excel and PowerPoint exports remain in the full document result.
+3. Ask for a calculation to open the code workflow automatically. Inspect/edit the sample Python source, switch to unit tests, copy/download files, and run sample structure checks from the result. The browser does not execute arbitrary code. Download both Python files to run the real unit tests locally.
+4. Continue with a follow-up in the same conversation. **New chat** starts a separate conversation. Recent chats and search live in the sidebar; **Knowledge Base** and **Agent Runs** are in the top navigation. The sidebar AI resource panel shows tokens used, remaining, and daily allocation. Operator audit navigation is removed; audit administration remains available to admins. Stop/retry controls handle interrupted requests. Admin **Settings** can simulate a backend outage; service tests cover retrieval and sandbox failure scenarios.
 5. Sign in as Administrator. Enable/disable models, expand and edit priority/node/context metadata, swap routing primaries and fallbacks, register arbitrary compute nodes, or change node status. New task steps use updated registry state.
 6. Change global, department, and user allocation in **Token & resource limits**. Inspect account capabilities and model-group access in **Users** or **Permissions**. Changes immediately affect new task admission and appear in audit logs.
 
@@ -44,6 +44,7 @@ src/
   api/            Typed auth, task, file, model, routing, user, audit and system services
     transport.ts  Central JSON HTTP/mock selection, error handling and credentials
     events.ts     Mock event engine and future authenticated SSE subscription
+    orchestrator.ts Demo intent routing and conversational sample responses
     store.ts      Browser-local mock persistence and permission enforcement
     seed.ts       Explicitly synthetic sample records
     exports.ts    Lazy-loaded Word, PDF, Excel, PowerPoint and CSV downloads
@@ -51,12 +52,13 @@ src/
   components/     Layout, materials, core diagram, file viewer, agent and code controls
   pages/          Lazy-loaded user and administration routes
   hooks/          Optional browser model-context tools
+  lib/            Conversation grouping and history ordering
 components/ui/    Accessible scaffold primitives
 app/              Shared design tokens and responsive operational styles
 tests/            Service and rendered-route regression coverage
 ```
 
-No components call fetch. Services expose Promise-based methods, so the UI does not depend on transport details. Set `VITE_API_MODE=http` and `VITE_API_BASE_URL=/api/v1` at build time to use FastAPI. The HTTP boundary is implemented; a FastAPI server implementing the documented contracts is still required. File endpoints return binary responses. See `docs/FASTAPI_CONTRACT.md` for endpoints and event semantics.
+No components call fetch. Services expose Promise-based methods, so the UI does not depend on transport details. The unified composer submits a prompt, attachment IDs, and optional conversation ID without a task type. Mock routing uses simple intent rules; a production orchestrator must perform classification and use conversation history. Set `VITE_API_MODE=http` and `VITE_API_BASE_URL=/api/v1` at build time to use FastAPI. The HTTP boundary is implemented; a FastAPI server implementing the documented contracts is still required. File endpoints return binary responses. See `docs/FASTAPI_CONTRACT.md` for endpoints and event semantics.
 
 `hasRole`, `hasPermission`, protected routes, ownership checks, admin role checks and service guards provide realistic demo behavior. They are not a production security boundary: every JavaScript value and browser storage record can be modified by the browser user. Production authorization must be enforced by FastAPI on every endpoint and stream.
 
@@ -74,6 +76,6 @@ No components call fetch. Services expose Promise-based methods, so the UI does 
 
 Keyboard-operable dialogs, switches, tabs and selects use Base UI primitives. Tables scroll on smaller screens; navigation collapses and becomes a mobile drawer. Focus states, status labels and reduced-motion styles are included. A lightweight CSS 3D core avoids WebGL and GPU dependency. Feature routes and export libraries are lazy-loaded. Font files are served locally.
 
-Optional imperative WebMCP tools are feature-detected and cleaned up on sign-out: `omnitrix_get_task` reads an authorized record; `omnitrix_start_task_creation` stages the visible form and never starts a task itself. No compatible browser tool context was available for validation. Browser screenshots and interactive browser QA were not performed; route and interaction coverage runs in a rendered DOM test environment.
+Optional imperative WebMCP tools are feature-detected and cleaned up on sign-out: `omnitrix_get_task` reads an authorized record; `omnitrix_start_task_creation` stages a message in a new chat and never sends it itself. No compatible browser tool context was available for validation. Browser screenshots and interactive browser QA were not performed; route and interaction coverage runs in a rendered DOM test environment.
 
 The PowerPoint exporter writes a fixed, text-only OOXML deck using `fflate`. ExcelJS uses an override to the compatible patched UUID 11.1.1 API. The build does not carry the scaffold’s server runtime or image parsers. Dependency audit results are tracked in `docs/VALIDATION.md`.

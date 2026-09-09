@@ -32,6 +32,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<Database | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const userId = user?.id;
   const refresh = useCallback(async () => {
     try {
       const next = await systemApi.getStatus();
@@ -66,7 +67,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [refresh]);
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
     const stop = startEventEngine();
     const unsub =
       API_MODE === 'mock'
@@ -81,7 +82,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       unsub();
       if (timer) clearInterval(timer);
     };
-  }, [user?.id, refresh]);
+  }, [userId, refresh]);
   const login = async (email: string, password: string) => {
     const session = await authApi.login(email, password);
     setUser(session.user);

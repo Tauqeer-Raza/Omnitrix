@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import {
   ShieldCheck,
@@ -22,13 +22,15 @@ export default function Login() {
     return (
       <Navigate to={user.role === 'admin' ? '/admin' : '/workspace'} replace />
     );
-  async function submit(e: FormEvent) {
+  async function submit(e: SubmitEvent) {
     e.preventDefault();
     setBusy(true);
     setError('');
     try {
       const u = await login(email, password);
-      navigate(u.role === 'admin' ? '/admin' : '/workspace', { replace: true });
+      void navigate(u.role === 'admin' ? '/admin' : '/workspace', {
+        replace: true,
+      });
     } catch (e) {
       setError((e as Error).message);
     } finally {

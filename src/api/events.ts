@@ -1,5 +1,6 @@
 import type { AgentEvent, ModelGroup } from '../types';
-import { DOCUMENT_STEPS, CODE_STEPS } from '../types';
+import { DOCUMENT_STEPS, CODE_STEPS, GENERAL_STEPS } from '../types';
+import { mockReply } from './orchestrator';
 import { API_MODE, API_BASE } from './transport';
 import {
   actor,
@@ -28,6 +29,16 @@ const codeEvents = [
   'sandbox_started',
   'test_passed',
   'test_passed',
+  'task_completed',
+];
+const generalEvents = [
+  'task_started',
+  'task_classified',
+  'model_routed',
+  'agent_reasoning',
+  'context_prepared',
+  'model_inference',
+  'response_generated',
   'task_completed',
 ];
 /** Simulated backend scheduler. One timer per provider; independent of the current route. */
@@ -59,13 +70,15 @@ export function advanceMockTasks() {
       if (!owner.enabled) continue;
       const step = task.step + 1;
       const group: ModelGroup =
-        task.type === 'code'
-          ? 'MASTER'
-          : step === 4
-            ? 'LIBRARIAN'
-            : step >= 5
-              ? 'MASTER'
-              : 'VISION';
+        task.type === 'general'
+          ? 'FAST'
+          : task.type === 'code'
+            ? 'MASTER'
+            : step === 4
+              ? 'LIBRARIAN'
+              : step >= 5
+                ? 'MASTER'
+                : 'VISION';
       let failure = '';
       let fallback = false;
       try {
@@ -88,7 +101,11 @@ export function advanceMockTasks() {
           'Synthetic test failure: diameter must be positive. Exit code 1. Sandbox stopped.';
       const type = failure
         ? 'task_failed'
-        : (task.type === 'document' ? documentEvents : codeEvents)[step];
+        : (task.type === 'document'
+            ? documentEvents
+            : task.type === 'code'
+              ? codeEvents
+              : generalEvents)[step];
       task.step = step;
       task.duration += 2;
       task.status = failure ? 'failed' : step === 7 ? 'completed' : 'running';
@@ -101,7 +118,11 @@ export function advanceMockTasks() {
         status: failure ? 'failed' : step === 7 ? 'completed' : 'running',
         message:
           failure ||
-          (task.type === 'document' ? DOCUMENT_STEPS : CODE_STEPS)[step] +
+          (task.type === 'document'
+            ? DOCUMENT_STEPS
+            : task.type === 'code'
+              ? CODE_STEPS
+              : GENERAL_STEPS)[step] +
             (fallback ? ' · configured fallback selected' : ''),
         timestamp: new Date().toISOString(),
         model: d.models.find((m) => m.id === task.modelId)?.name,
@@ -121,6 +142,7 @@ export function advanceMockTasks() {
         owner,
       );
       if (step === 7 && !failure) {
+        task.reply = mockReply(task);
         task.tokens = 2400;
         owner.used += 2400;
         owner.monthlyUsed += 2400;

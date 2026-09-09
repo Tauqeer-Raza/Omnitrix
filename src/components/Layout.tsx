@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useEffectEvent, useState, type CSSProperties } from 'react';
 import {
   Link,
   NavLink,
@@ -8,15 +8,11 @@ import {
 } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Plus,
   FileText,
-  SquareCode,
-  Database,
   Activity,
   ScrollText,
   Server,
   ShieldCheck,
-  Command,
   ChevronDown,
   LogOut,
   Bell,
@@ -26,7 +22,6 @@ import {
   Users,
   KeyRound,
   Gauge,
-  PanelLeft,
   Search,
   ArrowUpRight,
 } from 'lucide-react';
@@ -44,34 +39,8 @@ import { useApp } from '../state/AppContext';
 import { hasPermission } from '../api/auth';
 import { useWorkbenchTools } from '../hooks/useWorkbenchTools';
 import type { Permission } from '../types';
-const userNav = [
-  {
-    label: 'WORKSPACE',
-    items: [
-      ['Overview', '/workspace', LayoutDashboard, 'tasks'],
-      ['New Task', '/workspace/new', Plus, 'tasks'],
-    ],
-  },
-  {
-    label: 'WORK',
-    items: [
-      ['Documents', '/workspace/documents', FileText, 'documents'],
-      ['Code Tasks', '/workspace/code', SquareCode, 'code'],
-      ['Knowledge Base', '/workspace/knowledge', Database, 'knowledge'],
-    ],
-  },
-  {
-    label: 'MONITORING',
-    items: [
-      ['Agent Runs', '/workspace/runs', Activity, 'tasks'],
-      ['Audit Log', '/workspace/audit', ScrollText, 'audit'],
-    ],
-  },
-  {
-    label: 'SYSTEM',
-    items: [['System Status', '/workspace/system', Server, 'tasks']],
-  },
-];
+import OperatorNavigation from './OperatorNavigation';
+import { getConversations } from '../lib/conversations';
 const adminNav = [
   {
     label: 'CONTROL CENTER',
@@ -105,18 +74,26 @@ const adminNav = [
   },
   { label: 'SYSTEM', items: [['Settings', '/admin/settings', Settings]] },
 ];
-function Navigation({ admin }: { admin: boolean }) {
+function Navigation({
+  admin,
+  onSearch,
+}: {
+  admin: boolean;
+  onSearch: () => void;
+}) {
   const { user } = useApp();
   const { setOpen, setOpenMobile } = useSidebar();
   const location = useLocation();
+  const applyViewport = useEffectEvent((matches: boolean) => setOpen(!matches));
   useEffect(() => {
     const query = matchMedia('(min-width: 768px) and (max-width: 1100px)');
-    const apply = () => setOpen(!query.matches);
+    const apply = () => applyViewport(query.matches);
     apply();
     query.addEventListener('change', apply);
     return () => query.removeEventListener('change', apply);
   }, []);
   useEffect(() => setOpenMobile(false), [location.pathname, setOpenMobile]);
+  if (!admin) return <OperatorNavigation onSearch={onSearch} />;
   return (
     <>
       <SidebarHeader className="brand-header">
@@ -128,7 +105,7 @@ function Navigation({ admin }: { admin: boolean }) {
         </Link>
       </SidebarHeader>
       <SidebarContent className="nav-content">
-        {(admin ? adminNav : userNav).map((group) => (
+        {adminNav.map((group) => (
           <div className="nav-group" key={group.label}>
             <div className="nav-group-title">{group.label}</div>
             {group.items.map(([label, path, Icon, permission]) => {
@@ -195,6 +172,7 @@ export default function Layout({ admin = false }: { admin?: boolean }) {
     location.pathname.split('/')[2]?.replaceAll('-', ' ') || 'Overview';
   return (
     <SidebarProvider
+      className={admin ? '' : 'operator-shell'}
       style={
         {
           '--sidebar-width': '230px',
@@ -203,16 +181,39 @@ export default function Layout({ admin = false }: { admin?: boolean }) {
       }
     >
       <Sidebar collapsible="icon" className="omni-sidebar">
-        <Navigation admin={admin} />
+        <Navigation admin={admin} onSearch={() => setSearchOpen(true)} />
       </Sidebar>
       <div className="app-main">
         <header className="topbar">
-          <div className="breadcrumb">
-            <SidebarTrigger className="sidebar-toggle" />
-            <span>{admin ? 'Control center' : 'Workspace'}</span>
-            <span className="breadcrumb-slash">/</span>
-            <b>{section}</b>
-          </div>
+          {admin ? (
+            <div className="breadcrumb">
+              <SidebarTrigger className="sidebar-toggle" />
+              <span>{admin ? 'Control center' : 'Workspace'}</span>
+              <span className="breadcrumb-slash">/</span>
+              <b>{section}</b>
+            </div>
+          ) : (
+            <div className="operator-top-navigation">
+              <SidebarTrigger className="sidebar-toggle" />
+              <nav aria-label="Workspace navigation">
+                <NavLink
+                  to="/workspace"
+                  end
+                  className={() =>
+                    !['knowledge', 'runs', 'system'].includes(section)
+                      ? 'active'
+                      : ''
+                  }
+                >
+                  Chat
+                </NavLink>
+                {hasPermission(user, 'knowledge') && (
+                  <NavLink to="/workspace/knowledge">Knowledge Base</NavLink>
+                )}
+                <NavLink to="/workspace/runs">Agent Runs</NavLink>
+              </nav>
+            </div>
+          )}
           <div className="topbar-right">
             <span className="topbar-secure">
               <span className="status-dot" />
@@ -227,14 +228,16 @@ export default function Layout({ admin = false }: { admin?: boolean }) {
               <Search size={17} />
               <kbd>⌘ K</kbd>
             </button>
-            <button
-              className="icon-button notification-button"
-              aria-label="Notifications"
-              onClick={() => setNotifications(true)}
-            >
-              <Bell size={18} />
-              <i />
-            </button>
+            {admin && (
+              <button
+                className="icon-button notification-button"
+                aria-label="Notifications"
+                onClick={() => setNotifications(true)}
+              >
+                <Bell size={18} />
+                <i />
+              </button>
+            )}
             <div className="profile-wrap">
               <button
                 className="profile-button"
@@ -251,10 +254,19 @@ export default function Layout({ admin = false }: { admin?: boolean }) {
               {profile && (
                 <div className="profile-menu">
                   <p>{user?.email}</p>
+                  {!admin && (
+                    <Link
+                      className="operator-status-link"
+                      to="/workspace/system"
+                    >
+                      <Server size={14} />
+                      System status
+                    </Link>
+                  )}
                   <Button
                     onClick={async () => {
                       await logout();
-                      navigate('/login');
+                      void navigate('/login');
                     }}
                   >
                     <LogOut size={15} />
@@ -282,28 +294,36 @@ export default function Layout({ admin = false }: { admin?: boolean }) {
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
         title="Search the workbench"
-        description="Find local tasks, documents, and workspaces."
+        description={
+          admin
+            ? 'Find local tasks and workspaces.'
+            : 'Find and continue a previous conversation.'
+        }
       >
         <SearchField
           value={search}
           onChange={setSearch}
-          placeholder="Search by task or document name…"
+          placeholder={admin ? 'Search tasks…' : 'Search conversations…'}
         />
         <div className="search-results">
-          {(data?.tasks ?? [])
+          {(admin ? (data?.tasks ?? []) : getConversations(data?.tasks ?? []))
             .filter((t) => t.title.toLowerCase().includes(search.toLowerCase()))
-            .slice(0, 6)
+            .slice(0, 50)
             .map((t) => (
               <Link
                 key={t.id}
-                to={`/workspace/${t.type === 'code' ? 'code' : 'runs'}/${t.id}`}
+                to={
+                  admin ? `/workspace/runs/${t.id}` : `/workspace/chats/${t.id}`
+                }
                 onClick={() => setSearchOpen(false)}
               >
                 <FileText size={17} />
                 <span>
                   {t.title}
                   <small>
-                    {t.id} · {t.status}
+                    {admin && 'status' in t
+                      ? t.status
+                      : 'Continue conversation'}
                   </small>
                 </span>
                 <ArrowUpRight size={15} />

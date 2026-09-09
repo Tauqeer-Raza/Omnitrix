@@ -11,13 +11,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../state/AppContext';
 import { taskApi } from '../api/tasks';
-import {
-  Button,
-  PageHeader,
-  StatusBadge,
-  Empty,
-  ErrorMessage,
-} from '../components/common';
+import { Button, PageHeader, StatusBadge, Empty } from '../components/common';
 import SovereigntyConsole from '../components/SovereigntyConsole';
 import CodeEditor, { SAMPLE_CODE } from '../components/CodeEditor';
 import AgentTimeline from '../components/AgentTimeline';
@@ -51,9 +45,12 @@ export default function CodeWorkspace() {
     (task.status === 'completed' && execution === 'idle');
   return (
     <>
-      <Link className="breadcrumb-back" to="/workspace/code">
+      <Link
+        className="breadcrumb-back"
+        to={`/workspace/chats/${task.conversationId ?? task.id}`}
+      >
         <ArrowLeft size={13} />
-        Code tasks / <span className="mono">{task.id}</span>
+        Back to conversation / <span className="mono">{task.id}</span>
       </Link>
       <PageHeader
         eyebrow="SANDBOXED CODE WORKFLOW"
@@ -156,7 +153,9 @@ export default function CodeWorkspace() {
             </div>
           </div>
         </section>
-        <SovereigntyConsole task={task} />
+        {['running', 'queued'].includes(task.status) && (
+          <SovereigntyConsole task={task} />
+        )}
       </div>
     </>
   );

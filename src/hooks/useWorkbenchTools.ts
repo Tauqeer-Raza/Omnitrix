@@ -5,6 +5,7 @@ import { taskApi } from '../api/tasks';
 /** Optional browser capability. No external calls or unsolicited actions. */
 export function useWorkbenchTools() {
   const { user } = useApp();
+  const userId = user?.id;
   const navigate = useNavigate();
   useEffect(() => {
     type Tool = {
@@ -24,7 +25,7 @@ export function useWorkbenchTools() {
         };
       }
     ).modelContext;
-    if (!context || !user) return;
+    if (!context || !userId) return;
     const lifecycle = new AbortController();
     const tools: Tool[] = [
       {
@@ -58,14 +59,13 @@ export function useWorkbenchTools() {
       {
         name: 'omnitrix_start_task_creation',
         description:
-          'Open the new-task form with a prompt. This stages a workflow; the operator must start it.',
+          'Open a new chat with a message. This stages the message; the operator must send it. The orchestrator selects the tools.',
         inputSchema: {
           type: 'object',
           properties: {
             prompt: { type: 'string' },
-            type: { type: 'string', enum: ['document', 'code'] },
           },
-          required: ['prompt', 'type'],
+          required: ['prompt'],
           additionalProperties: false,
         },
         annotations: { readOnlyHint: false, untrustedContentHint: false },
@@ -74,13 +74,11 @@ export function useWorkbenchTools() {
             !input ||
             typeof input !== 'object' ||
             !('prompt' in input) ||
-            typeof input.prompt !== 'string' ||
-            !('type' in input) ||
-            !['document', 'code'].includes(String(input.type))
+            typeof input.prompt !== 'string'
           )
-            throw new Error('A prompt and a valid task type are required.');
-          navigate('/workspace/new', {
-            state: { prompt: input.prompt.slice(0, 8000), type: input.type },
+            throw new Error('A message is required.');
+          void navigate('/workspace/new', {
+            state: { prompt: input.prompt.slice(0, 8000) },
           });
           return { staged: true, created: false };
         },
@@ -94,5 +92,5 @@ export function useWorkbenchTools() {
       } catch {}
     }
     return () => lifecycle.abort();
-  }, [user?.id, navigate]);
+  }, [userId, navigate]);
 }

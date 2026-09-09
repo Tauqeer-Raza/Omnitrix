@@ -8,6 +8,7 @@ import '@fontsource/inter/latin-700.css';
 import '../app/globals.css';
 import '../app/operations.css';
 import '../app/readability.css';
+import '../app/chat.css';
 import App from './App';
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

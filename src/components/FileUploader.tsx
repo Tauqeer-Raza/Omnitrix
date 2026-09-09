@@ -3,7 +3,7 @@ import { UploadCloud, FileText, X, Check, RotateCcw } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { documentApi } from '../api/documents';
 import type { LocalDocument } from '../types';
-import { Button, ErrorMessage } from './common';
+import { ErrorMessage } from './common';
 interface UploadItem {
   id: string;
   file: File;

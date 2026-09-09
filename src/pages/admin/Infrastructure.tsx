@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import {
   Cpu,
   ChevronDown,
@@ -7,11 +7,8 @@ import {
   Plus,
   Server,
   GitBranch,
-  ArrowRight,
-  ArrowDown,
   Boxes,
   ShieldCheck,
-  ArrowUpRight,
   Pencil,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -29,13 +26,11 @@ import {
 import {
   Button,
   PageHeader,
-  SectionHeading,
   StatusBadge,
   SearchField,
   Picker,
   Modal,
   ErrorMessage,
-  number,
 } from '../../components/common';
 function ModelRow({ model }: { model: Model }) {
   const { data, act } = useApp();
@@ -235,7 +230,7 @@ export function RoutingPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   if (!data) return null;
-  async function save(e: FormEvent) {
+  async function save(e: SubmitEvent) {
     e.preventDefault();
     setBusy(true);
     setError('');

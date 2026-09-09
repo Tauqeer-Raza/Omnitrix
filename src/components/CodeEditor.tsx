@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Copy, Download, Check, FileCode2, Pencil, Code2 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { downloadBlob } from '../api/exports';
-import { Button } from './common';
+
 import { toast } from 'sonner';
 export const SAMPLE_CODE = `"""Darcy–Weisbach pressure drop. Synthetic engineering example."""
 from math import pi
