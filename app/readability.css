@@ -1,0 +1,892 @@
+/* Readable operational text on the archival surfaces; diagrams retain scale labels. */
+.nav-item {
+  font-size: 13px;
+}
+.nav-group-title {
+  font-size: 11px;
+  color: #6c6d61;
+}
+.page-header p {
+  font-size: 14px;
+  color: #626459;
+}
+.page-header .eyebrow {
+  font-size: 11px;
+}
+.breadcrumb {
+  font-size: 12px;
+}
+.profile-button {
+  font-size: 12px;
+}
+.profile-button small {
+  font-size: 10px;
+}
+.metric-top .eyebrow {
+  font-size: 11px;
+}
+.metric-detail {
+  font-size: 10px;
+  color: #676a5d;
+}
+.workspace-heading .eyebrow {
+  font-size: 12px;
+}
+.workspace-copy p {
+  font-size: 13px;
+  color: #6b705f;
+}
+.workspace-copy h2 {
+  color: #181602;
+}
+.workspace-copy h2 span {
+  color: #767c67;
+}
+.chapter-label {
+  font-size: 9px;
+  color: #7a816b;
+}
+.workspace-trust {
+  font-size: 9px;
+  color: #686e5e;
+}
+.task-type-switch button {
+  font-size: 12px;
+}
+.command-input textarea {
+  font-size: 14px;
+}
+.attach-button {
+  font-size: 11px;
+  color: #6b715f;
+}
+.section-heading .eyebrow {
+  font-size: 12px;
+}
+.task-row-title b {
+  font-size: 13px;
+}
+.task-row-title small {
+  font-size: 10px;
+  color: #6e745f;
+}
+.task-table-head {
+  font-size: 10px;
+  color: #6d755e;
+}
+.task-icon {
+  color: #738060;
+}
+.task-row {
+  padding: 14px 8px;
+}
+.status {
+  font-size: 10px;
+  padding: 6px 8px;
+}
+.status-completed,
+.status-online,
+.status-indexed,
+.status-success {
+  color: #536541;
+  background: #d7decd66;
+}
+.status-running,
+.status-processing {
+  color: #905524;
+}
+.status-queued,
+.status-offline,
+.status-disabled {
+  color: #666c5a;
+}
+.status-failed,
+.status-degraded {
+  color: #985035;
+}
+.activity-feed > div {
+  font-size: 10px;
+}
+.activity-feed time {
+  color: #6e775f;
+}
+.activity-feed > div > span:last-child {
+  color: #596749;
+}
+.live-text {
+  font-size: 9px;
+  color: #63704f;
+}
+.resource-numbers {
+  font-size: 12px;
+  color: #6f7961;
+}
+.resource-numbers b {
+  color: #424c36;
+}
+.resource-meter > small {
+  font-size: 11px;
+  color: #6d775f;
+}
+.resource-meter .mono {
+  font-size: 11px;
+  color: #9f5e2e;
+}
+.console-head .eyebrow {
+  font-size: 10px;
+}
+.console-network .eyebrow {
+  font-size: 11px;
+  color: #bdc9ac;
+}
+.console-local > span:first-child {
+  font-size: 10px;
+  color: #c6d2b7;
+}
+.console-local > .mono {
+  font-size: 8px;
+  color: #c4d6ad;
+}
+.local-checks > div {
+  font-size: 11px;
+  color: #cad6b9;
+}
+.local-requests {
+  font-size: 10px;
+  color: #b2c59a;
+}
+.console-footer {
+  font-size: 8px;
+  color: #becdaa;
+}
+.console-section dt {
+  font-size: 10px;
+  color: #b7c9a2;
+}
+.console-section dd {
+  font-size: 12px;
+}
+.console-subhead {
+  font-size: 11px;
+  color: #c0d1ad;
+}
+.trace-feed > div {
+  font-size: 10px;
+}
+.trace-feed time {
+  color: #a4b78c;
+}
+.trace-feed span {
+  color: #d0dfbd;
+}
+.console-note {
+  font-size: 10px;
+  color: #abbc96;
+}
+.route-flow {
+  font-size: 10px;
+}
+.login-form > p {
+  font-size: 14px;
+  color: #6b745e;
+}
+.login-form label {
+  font-size: 13px;
+  color: #515c43;
+}
+.login-form input {
+  font-size: 14px;
+}
+.demo-credentials p,
+.demo-credentials code {
+  font-size: 11px;
+}
+.demo-credentials b {
+  color: #4d5b3d;
+}
+.demo-credentials code,
+.demo-credentials p.demo-password {
+  color: #6b7957;
+}
+.demo-credentials > small {
+  color: #738261;
+  font-size: 11px;
+}
+.login-bottom {
+  font-size: 11px;
+  color: #697857;
+}
+.login-art .login-trust {
+  font-size: 10px;
+  color: #bdcbb0;
+}
+.login-editorial p {
+  font-size: 14px;
+  color: #c3cfb6;
+}
+.login-form h2 {
+  color: #181602;
+}
+.login-form .eyebrow {
+  font-size: 11px;
+}
+.panel > p,
+.note,
+.context-placeholder,
+.panel .note {
+  font-size: 12px;
+  color: #667855;
+}
+.panel h3,
+.panel h2 {
+  color: #181602;
+}
+.form-stack label,
+.new-task-form > label,
+.field-grid label {
+  font-size: 13px;
+  color: #536544;
+}
+.form-stack input,
+.new-task-form input,
+.new-task-form textarea,
+.model-edit input {
+  font-size: 13px;
+  color: #303e23;
+}
+.data-table th {
+  font-size: 11px;
+  color: #63764f;
+}
+.data-table td {
+  font-size: 13px;
+  color: #526640;
+}
+.data-table .mono {
+  font-size: 11px;
+  color: #5e7449;
+}
+.data-table .cell-subtitle {
+  font-size: 11px;
+  color: #6f815d;
+}
+.data-table .glass-button {
+  font-size: 11px;
+}
+.data-table strong {
+  color: #181602;
+}
+.picker {
+  font-size: 12px !important;
+  color: #546841;
+}
+.search-field input {
+  font-size: 13px;
+  color: #52643f;
+}
+.search-field input::placeholder {
+  color: #768466;
+}
+.search-field {
+  color: #768466;
+}
+.toggle-row label {
+  font-size: 13px;
+  color: #536641;
+}
+.toggle-row small {
+  font-size: 12px;
+  color: #6d8058;
+}
+.section-title {
+  font-size: 12px;
+  color: #677c50;
+}
+.task-choice b {
+  font-size: 13px;
+}
+.task-choice small {
+  font-size: 11px;
+  color: #6c8056;
+}
+.prompt-examples > span {
+  font-size: 9px;
+  color: #6d7f59;
+}
+.prompt-examples button {
+  font-size: 11px;
+  color: #5e7746;
+}
+.upload-zone b {
+  font-size: 14px;
+}
+.upload-zone > span:not(.upload-icon) {
+  font-size: 12px;
+  color: #617b47;
+}
+.upload-zone small {
+  font-size: 10px;
+  color: #6c8055;
+}
+.upload-item b {
+  font-size: 12px;
+  color: #546d3b;
+}
+.upload-item small {
+  font-size: 11px;
+  color: #637f48;
+}
+.simulation-details summary,
+.simulation-details p {
+  font-size: 12px;
+  color: #657d4c;
+}
+.task-submit-row > span {
+  font-size: 10px;
+  color: #637a4b;
+}
+.task-side .note {
+  font-size: 11px;
+  color: #6d8058;
+}
+.workflow-meta > span {
+  font-size: 11px;
+  color: #657b4e;
+}
+.viewer-heading {
+  font-size: 11px;
+  color: #5b7443;
+}
+.viewer-name {
+  font-size: 12px;
+  color: #445d2d;
+}
+.viewer-name > span,
+.viewer-metadata {
+  font-size: 9px;
+  color: #607b46;
+}
+.viewer-controls input {
+  font-size: 10px;
+  color: #5d7743;
+}
+.viewer-controls > span {
+  font-size: 11px;
+}
+.page-controls {
+  font-size: 10px;
+  color: #5a7640;
+}
+.agent-timeline b {
+  font-size: 11px;
+  color: #4d6b32;
+}
+.agent-timeline p {
+  font-size: 11px;
+  color: #6b8551;
+}
+.agent-timeline li > span:last-child {
+  font-size: 10px;
+  color: #6d8851;
+}
+.agent-timeline .step-idle b {
+  color: #778b62;
+}
+.context-item b {
+  font-size: 11px;
+  color: #547237;
+}
+.context-item p {
+  font-size: 11px;
+  color: #607d43;
+}
+.context-item footer {
+  font-size: 8px;
+  color: #6a854e;
+}
+.context-item > div > span {
+  font-size: 10px;
+  color: #536f38;
+}
+.output-ready b {
+  font-size: 13px;
+}
+.output-ready p {
+  font-size: 11px;
+  color: #6a8450;
+}
+.completion-banner p {
+  font-size: 12px;
+  color: #647f45;
+}
+.completion-banner .eyebrow {
+  font-size: 10px;
+  color: #6c8950;
+}
+.result-metadata > span {
+  font-size: 11px;
+  color: #546f38;
+}
+.result-metadata b {
+  font-size: 10px;
+  color: #6d8752;
+}
+.code-request > p {
+  font-size: 12px;
+  color: #5c7840;
+}
+.code-request .note {
+  font-size: 11px;
+  color: #6a864e;
+}
+.code-request .agent-timeline b {
+  font-size: 10px;
+}
+.highlighted-code {
+  font-size: 11px;
+}
+.line-number {
+  font-size: 10px;
+  color: #99b07d;
+}
+.file-tabs [data-slot='tabs-trigger'] {
+  font-size: 10px !important;
+}
+.editor-footer {
+  font-size: 9px;
+  color: #acc68b;
+}
+.execution-heading {
+  font-size: 10px;
+  color: #c2d7a7;
+}
+.execution-lines {
+  font-size: 11px;
+}
+.execution-lines small {
+  font-size: 10px;
+  color: #acc68d;
+}
+.execution-lines .execution-note {
+  font-size: 11px;
+  color: #b5cd98;
+}
+.code-result > span {
+  font-size: 9px;
+  color: #acc78b;
+}
+.knowledge-banner h2 {
+  color: #334b21;
+}
+.knowledge-banner p {
+  font-size: 12px;
+  color: #627f43;
+}
+.knowledge-banner .eyebrow {
+  font-size: 10px;
+  color: #6c854f;
+}
+.knowledge-result h3 {
+  font-size: 14px;
+  color: #43602c;
+}
+.knowledge-result p {
+  font-size: 13px;
+  color: #627e45;
+}
+.knowledge-result > div > span {
+  font-size: 11px;
+  color: #5c7a3d;
+}
+.knowledge-result footer {
+  font-size: 10px;
+  color: #627f42;
+}
+.audit-notice .mono {
+  font-size: 10px;
+  color: #67844a;
+}
+.audit-action {
+  font-size: 11px;
+  color: #4f7133;
+}
+.pagination {
+  font-size: 11px;
+  color: #647f46;
+}
+.system-operational p {
+  font-size: 12px;
+  color: #5f7b42;
+}
+.system-operational .eyebrow {
+  font-size: 10px;
+  color: #67844a;
+}
+.service-row h3 {
+  font-size: 14px;
+  color: #334c20;
+}
+.service-row p {
+  font-size: 12px;
+  color: #687f50;
+}
+.service-latency {
+  font-size: 11px;
+  color: #617b45;
+}
+.security-boundary .note {
+  font-size: 11px;
+  color: #bbd59c;
+}
+.security-boundary .section-title {
+  color: #c7deb0;
+}
+.system-node-summary .mono {
+  font-size: 11px;
+  color: #607f40;
+}
+.admin-metrics .metric-detail {
+  font-size: 10px;
+  color: #667755;
+}
+.usage-headline small {
+  font-size: 11px;
+  color: #637a4a;
+}
+.usage-headline > .mono {
+  font-size: 9px;
+  color: #71865c;
+}
+.usage-bottom {
+  font-size: 10px;
+  color: #627b47;
+}
+.admin-core-header .eyebrow {
+  font-size: 10px;
+  color: #c0d7a5;
+}
+.admin-core-stats {
+  font-size: 8px;
+  color: #bbd39f;
+}
+.admin-core-panel > a {
+  font-size: 12px;
+}
+.mini-node b {
+  font-size: 12px;
+}
+.mini-node small {
+  font-size: 9px;
+  color: #69884a;
+}
+.mini-node > .mono {
+  font-size: 11px;
+  color: #638047;
+}
+.admin-audit time {
+  font-size: 10px;
+  color: #6b8750;
+}
+.admin-audit b {
+  font-size: 10px;
+  color: #526f39;
+}
+.admin-audit small {
+  font-size: 11px;
+  color: #69844e;
+}
+.department-usage h3 {
+  font-size: 14px;
+}
+.model-group-heading p {
+  font-size: 12px;
+  color: #66804a;
+}
+.model-group-heading > .mono {
+  font-size: 10px;
+  color: #5d7a3f;
+}
+.model-expand b {
+  font-size: 13px;
+  color: #3d5827;
+}
+.model-expand small {
+  font-size: 12px;
+  color: #6a8350;
+}
+.model-node,
+.model-priority {
+  color: #5d7841;
+  font-size: 11px;
+}
+.model-edit label {
+  font-size: 12px;
+  color: #59763d;
+}
+.model-edit-footer > span {
+  font-size: 12px;
+  color: #6a8252;
+}
+.routing-architecture > .eyebrow {
+  font-size: 11px;
+  color: #69834e;
+}
+.architecture-item b {
+  font-size: 9px;
+  color: #58743c;
+}
+.architecture-item > span.active b {
+  color: #975c2c;
+}
+.routing-architecture > p {
+  font-size: 12px;
+  color: #647d48;
+}
+.routing-labels {
+  font-size: 9px;
+  color: #5d793f;
+}
+.routing-task b {
+  font-size: 12px;
+}
+.routing-task small {
+  font-size: 10px;
+  color: #668348;
+}
+.routing-model {
+  font-size: 11px;
+  color: #4a6c2e;
+}
+.routing-model.fallback {
+  color: #667f4c;
+}
+.routing-model small {
+  font-size: 8px;
+  color: #658148;
+}
+.routing-node {
+  font-size: 11px;
+  color: #527336;
+}
+.routing-node small {
+  font-size: 8px;
+  color: #68834d;
+}
+.routing-policy-note h3 {
+  font-size: 14px;
+  color: #344e20;
+}
+.routing-policy-note p {
+  font-size: 12px;
+  color: #637e46;
+}
+.node-card > .eyebrow,
+.node-card-footer > span,
+.node-models .eyebrow {
+  font-size: 10px;
+  color: #69834f;
+}
+.node-host {
+  font-size: 12px;
+  color: #5f7c43;
+}
+.node-utilization .progress-caption {
+  font-size: 10px;
+  color: #5f7c43;
+}
+.node-specs dt {
+  font-size: 10px;
+  color: #6b8452;
+}
+.node-specs dd {
+  font-size: 12px;
+  color: #3f6025;
+}
+.node-models > span:not(.eyebrow) {
+  font-size: 10px;
+  color: #587b38;
+}
+.user-cell small {
+  font-size: 10px;
+  color: #6f8855;
+}
+.user-detail-identity p {
+  font-size: 12px;
+  color: #66814a;
+}
+.permissions-summary p {
+  font-size: 12px;
+  color: #657e49;
+}
+.confirmation-summary dt,
+.confirmation-summary dd {
+  font-size: 12px;
+  color: #5d7a40;
+}
+.settings-architecture p {
+  font-size: 12px;
+  color: #657e4a;
+}
+.settings-architecture .eyebrow {
+  font-size: 11px;
+  color: #6b8650;
+}
+.settings-architecture code {
+  font-size: 12px;
+  color: #4a6c2d;
+}
+.supplement-exports {
+  display: flex;
+  gap: 8px;
+}
+.supplement-exports > .glass-button {
+  font-size: 10px;
+  padding: 7px;
+  min-height: 30px;
+  flex: 1;
+}
+.topbar .demo-label {
+  color: #6b6e61;
+}
+.secure-footer {
+  font-size: 9px;
+  color: #758065;
+}
+@media (max-width: 1200px) {
+  .metric-top .eyebrow {
+    font-size: 10px;
+  }
+  .metric-detail {
+    font-size: 9px;
+  }
+  .console-head .eyebrow {
+    font-size: 9px;
+  }
+  .console-network .eyebrow {
+    font-size: 10px;
+  }
+  .local-checks > div {
+    font-size: 10px;
+  }
+  .task-row-title b {
+    font-size: 12px;
+  }
+  .task-row-title small {
+    font-size: 9px;
+  }
+  .workspace-copy p {
+    font-size: 12px;
+  }
+  .activity-feed > div {
+    font-size: 9px;
+  }
+  .console-footer {
+    font-size: 7px;
+  }
+  .local-requests {
+    font-size: 9px;
+  }
+}
+@media (max-width: 900px) {
+  .workspace-copy p {
+    font-size: 11px;
+  }
+  .command-input textarea {
+    font-size: 13px;
+  }
+  .task-type-switch button {
+    font-size: 11px;
+  }
+  .model-group-heading p {
+    font-size: 11px;
+  }
+}
+@media (max-width: 767px) {
+  .page-header p {
+    font-size: 12px;
+  }
+  .metric-detail {
+    font-size: 10px;
+  }
+  .metric-top .eyebrow {
+    font-size: 11px;
+  }
+  .task-row-title b {
+    font-size: 12px;
+  }
+  .task-row-title small {
+    font-size: 9px;
+  }
+  .status {
+    font-size: 9px;
+  }
+  .workspace-heading .eyebrow {
+    font-size: 11px;
+  }
+  .workspace-copy p {
+    font-size: 12px;
+  }
+  .workspace-copy h2 {
+    font-size: 25px;
+  }
+  .task-type-switch button {
+    font-size: 11px;
+  }
+  .command-input textarea {
+    font-size: 13px;
+  }
+  .compact .console-local > span:first-child {
+    font-size: 8px;
+  }
+  .compact .local-checks > div {
+    font-size: 10px;
+  }
+  .compact .console-network .eyebrow {
+    font-size: 11px;
+  }
+  .console-footer {
+    font-size: 8px;
+  }
+  .local-requests {
+    font-size: 11px;
+  }
+  .completion-downloads {
+    flex-wrap: wrap;
+  }
+  .completion-downloads > .supplement-exports {
+    width: 100%;
+  }
+  .model-group-heading > .mono {
+    font-size: 8px;
+  }
+  .model-expand b {
+    font-size: 12px;
+  }
+  .model-expand small {
+    font-size: 11px;
+  }
+  .task-submit-row > span {
+    font-size: 9px;
+  }
+  .agent-timeline b {
+    font-size: 11px;
+  }
+  .context-item b {
+    font-size: 12px;
+  }
+  .context-item p {
+    font-size: 12px;
+  }
+  .context-item footer {
+    font-size: 9px;
+  }
+  .task-choice small {
+    font-size: 10px;
+  }
+  .service-row p {
+    font-size: 11px;
+  }
+  .node-models > span:not(.eyebrow) {
+    font-size: 11px;
+  }
+}
