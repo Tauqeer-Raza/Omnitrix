@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../state/AppContext';
 import { systemApi } from '../api/system';
+import { API_MODE } from '../api/transport';
 import { exportCSV } from '../api/exports';
 import {
   Button,
@@ -273,8 +274,9 @@ export function AuditPage({ admin = false }: { admin?: boolean }) {
         </div>
       </div>
       <p className="note">
-        Demo audit records are browser-local. Tamper-resistant retention and
-        authorization belong to the production backend.
+        {API_MODE === 'http'
+          ? 'Audit records are persisted in the control-plane SQL database. This view includes the latest 1,000 events.'
+          : 'Demo audit records are browser-local. Tamper-resistant retention and authorization belong to the production backend.'}
       </p>
     </>
   );
@@ -283,35 +285,85 @@ export function SystemPage({ security = false }: { security?: boolean }) {
   const { data, act, refresh } = useApp();
   if (!data) return null;
   const offline = data.settings.offline;
-  const services = [
-    [
-      'AI Models',
-      Cpu,
-      `${data.models.filter((m) => m.enabled).length} / ${data.models.length} enabled`,
-      data.models.some((m) => m.enabled) ? 'online' : 'offline',
-    ],
-    ['OCR Engine', ScanLine, 'Local vision pipeline', 'online'],
-    [
-      'Vector Store',
-      Database,
-      `${data.documents.reduce((s, d) => s + d.chunks, 0)} indexed chunks`,
-      'online',
-    ],
-    [
-      'Agent Orchestrator',
-      Workflow,
-      'Task planning & tool coordination',
-      'online',
-    ],
-    ['Execution Sandbox', SquareCode, 'Network isolation enabled', 'online'],
-    ['Document Generator', FileText, 'Word / PDF output adapters', 'online'],
-    [
-      'Audit Database',
-      ScrollText,
-      `${data.audit.length} local event records`,
-      'online',
-    ],
-  ];
+  const services =
+    API_MODE === 'http'
+      ? [
+          [
+            'Backend API',
+            Workflow,
+            'Authenticated control-plane connection',
+            'online',
+          ],
+          [
+            'Inference workers',
+            Cpu,
+            `${data.nodes.filter((n) => n.status === 'online' && n.id !== 'control-plane').length} nodes marked online; availability checked when dispatched`,
+            'configured',
+          ],
+          [
+            'Document index',
+            Database,
+            `${data.documents.reduce((s, d) => s + d.chunks, 0)} persisted chunks`,
+            'local',
+          ],
+          [
+            'Code generation',
+            SquareCode,
+            'Code is returned for review; automatic execution is not enabled',
+            'review',
+          ],
+          [
+            'Document Generator',
+            FileText,
+            'Word / PDF / Excel / PowerPoint output',
+            'online',
+          ],
+          [
+            'Audit Database',
+            ScrollText,
+            `${data.audit.length} recent SQL event records`,
+            'online',
+          ],
+        ]
+      : [
+          [
+            'AI Models',
+            Cpu,
+            `${data.models.filter((m) => m.enabled).length} / ${data.models.length} enabled`,
+            data.models.some((m) => m.enabled) ? 'online' : 'offline',
+          ],
+          ['OCR Engine', ScanLine, 'Local vision pipeline', 'online'],
+          [
+            'Vector Store',
+            Database,
+            `${data.documents.reduce((s, d) => s + d.chunks, 0)} indexed chunks`,
+            'online',
+          ],
+          [
+            'Agent Orchestrator',
+            Workflow,
+            'Task planning & tool coordination',
+            'online',
+          ],
+          [
+            'Execution Sandbox',
+            SquareCode,
+            'Network isolation enabled',
+            'online',
+          ],
+          [
+            'Document Generator',
+            FileText,
+            'Word / PDF output adapters',
+            'online',
+          ],
+          [
+            'Audit Database',
+            ScrollText,
+            `${data.audit.length} local event records`,
+            'online',
+          ],
+        ];
   return (
     <>
       <PageHeader
@@ -333,11 +385,21 @@ export function SystemPage({ security = false }: { security?: boolean }) {
         <ShieldCheck size={34} />
         <div>
           <span className="eyebrow">LOCAL ENVIRONMENT</span>
-          <h2>{offline ? 'Local backend offline' : 'System operational'}</h2>
+          <h2>
+            {API_MODE === 'http'
+              ? offline
+                ? 'Processing paused'
+                : 'Control plane connected'
+              : offline
+                ? 'Local backend offline'
+                : 'System operational'}
+          </h2>
           <p>
-            {offline
-              ? 'Workflows are paused until the local mock service is restored.'
-              : 'All core services are available. No external inference connections.'}
+            {API_MODE === 'http'
+              ? 'Worker availability is checked during dispatch. Hardware and network measurements are not configured.'
+              : offline
+                ? 'Workflows are paused until the local mock service is restored.'
+                : 'All core services are available. No external inference connections.'}
           </p>
         </div>
         {offline ? (
@@ -347,7 +409,9 @@ export function SystemPage({ security = false }: { security?: boolean }) {
               void act(() => systemApi.reconnect(), 'Local backend reconnected')
             }
           >
-            Reconnect demo backend
+            {API_MODE === 'http'
+              ? 'Resume processing'
+              : 'Reconnect demo backend'}
           </Button>
         ) : (
           <StatusBadge status="online" />
@@ -367,7 +431,7 @@ export function SystemPage({ security = false }: { security?: boolean }) {
                   <p>{String(detail)}</p>
                 </div>
                 <span className="service-latency mono">
-                  {offline ? '—' : '< 20 ms'}
+                  {offline || API_MODE === 'http' ? '—' : '< 20 ms'}
                 </span>
                 <StatusBadge status={offline ? 'offline' : String(status)} />
               </div>
@@ -381,26 +445,36 @@ export function SystemPage({ security = false }: { security?: boolean }) {
           </div>
           <div className="boundary-network">
             <div className="boundary-center">OMNITRIX</div>
-            {['MODEL', 'KNOWLEDGE', 'FILES', 'TOOLS', 'SANDBOX', 'AUDIT'].map(
-              (x, i) => (
-                <span key={x} className={`boundary-node node-${i}`}>
-                  {x}
-                </span>
-              ),
-            )}
+            {[
+              'MODEL',
+              'KNOWLEDGE',
+              'FILES',
+              'TOOLS',
+              API_MODE === 'http' ? 'ROUTER' : 'SANDBOX',
+              'AUDIT',
+            ].map((x, i) => (
+              <span key={x} className={`boundary-node node-${i}`}>
+                {x}
+              </span>
+            ))}
           </div>
           <div className="external-stat">
             <span>EXTERNAL CONNECTIONS</span>
-            <strong>0</strong>
+            <strong>{API_MODE === 'http' ? '—' : '0'}</strong>
             <Globe size={25} />
           </div>
           <div className="boundary-local">
-            <span>LOCAL CONNECTIONS</span>
+            <span>
+              {API_MODE === 'http'
+                ? 'RECORDED MODEL CALLS'
+                : 'LOCAL CONNECTIONS'}
+            </span>
             <b>{data.localRequests}</b>
           </div>
           <p className="note">
-            These are simulated service and network diagnostics. Production
-            monitoring must report measurements from the local backend.
+            {API_MODE === 'http'
+              ? 'Service configuration and SQL records are shown here. Network isolation must be established and verified at the gateway and LAN.'
+              : 'These are simulated service and network diagnostics. Production monitoring must report measurements from the local backend.'}
           </p>
         </div>
       </div>

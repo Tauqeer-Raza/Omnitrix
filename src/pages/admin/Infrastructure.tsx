@@ -1,4 +1,5 @@
 import { useState, type SubmitEvent } from 'react';
+import { API_MODE } from '../../api/transport';
 import {
   Cpu,
   ChevronDown,
@@ -10,6 +11,7 @@ import {
   Boxes,
   ShieldCheck,
   Pencil,
+  RefreshCw,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
@@ -22,6 +24,7 @@ import {
   type Model,
   type RoutingRule,
   type ComputeNode,
+  type ProviderHealth,
 } from '../../types';
 import {
   Button,
@@ -32,7 +35,13 @@ import {
   Modal,
   ErrorMessage,
 } from '../../components/common';
-function ModelRow({ model }: { model: Model }) {
+function ModelRow({
+  model,
+  health,
+}: {
+  model: Model;
+  health?: ProviderHealth;
+}) {
   const { data, act } = useApp();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(model);
@@ -52,16 +61,35 @@ function ModelRow({ model }: { model: Model }) {
           <Cpu size={18} />
           <span>
             <b>{model.name}</b>
-            <small>{model.role}</small>
+            <small>
+              {model.role}
+              {model.endpointHost ? ' · ' + model.endpointHost : ''}
+            </small>
+            {health?.loaded !== undefined && health.loaded !== null && (
+              <small>
+                {health.loaded
+                  ? `Loaded in memory${health.memoryBytes ? ' · ' + (health.memoryBytes / 1024 ** 3).toFixed(1) + ' GiB' : ''}${health.processor ? ' · ' + health.processor : ''}`
+                  : 'Unloaded · loads when selected'}
+              </small>
+            )}
           </span>
           {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </button>
         <span className="mono model-priority">P{model.priority}</span>
         <span className="model-node mono">{node?.name ?? 'Unassigned'}</span>
-        <StatusBadge status={model.enabled ? 'online' : 'disabled'} />
+        <StatusBadge
+          status={
+            model.configured === false
+              ? 'unconfigured'
+              : !model.enabled
+                ? 'disabled'
+                : (health?.status ?? 'configured')
+          }
+        />
         <Switch
           aria-label={`Enable ${model.name}`}
           checked={model.enabled}
+          disabled={model.configured === false}
           onCheckedChange={(enabled) =>
             void act(
               () => modelApi.update(model.id, { enabled }),
@@ -158,13 +186,59 @@ export function ModelsPage() {
   const { data } = useApp();
   const [query, setQuery] = useState('');
   const [group, setGroup] = useState('all');
+  const [health, setHealth] = useState<ProviderHealth[]>([]);
+  const [checking, setChecking] = useState(false);
+  const [healthError, setHealthError] = useState('');
+  const orchestratorHealth = health.find(
+    (entry) => entry.id === 'orchestrator',
+  );
+  async function checkServices() {
+    setChecking(true);
+    setHealthError('');
+    try {
+      setHealth(await systemApi.checkProviders());
+    } catch (error) {
+      setHealthError((error as Error).message);
+    } finally {
+      setChecking(false);
+    }
+  }
   return (
     <>
       <PageHeader
         eyebrow="AI INFRASTRUCTURE / MODEL REGISTRY"
         title="Local models"
         description="Four specialized model groups. One sovereign intelligence layer."
+        action={
+          <Button loading={checking} onClick={() => void checkServices()}>
+            <RefreshCw size={15} />
+            Check services
+          </Button>
+        }
       />
+      <div className="routing-policy-note">
+        <Cpu size={20} />
+        <div>
+          <h3>
+            Orchestrator · {data?.orchestrator?.model || 'Not configured'}
+          </h3>
+          <p>
+            Intent classification and plan selection
+            {data?.orchestrator?.endpointHost
+              ? ' · ' + data.orchestrator.endpointHost
+              : ' · add ORCHESTRATOR_BASE_URL and ORCHESTRATOR_MODEL'}
+            {orchestratorHealth?.loaded === true ? ' · Loaded in memory' : ''}
+            {orchestratorHealth?.loaded === false ? ' · Not currently loaded' : ''}
+          </p>
+        </div>
+        <StatusBadge
+          status={
+            orchestratorHealth?.status ??
+            (data?.orchestrator?.configured ? 'configured' : 'unconfigured')
+          }
+        />
+      </div>
+      {healthError && <ErrorMessage message={healthError} />}
       <div className="toolbar">
         <SearchField
           value={query}
@@ -212,7 +286,13 @@ export function ModelsPage() {
                 {models.length ? (
                   models
                     .sort((a, b) => a.priority - b.priority)
-                    .map((m) => <ModelRow model={m} key={m.id} />)
+                    .map((m) => (
+                      <ModelRow
+                        model={m}
+                        health={health.find((entry) => entry.id === m.id)}
+                        key={m.id}
+                      />
+                    ))
                 ) : (
                   <p className="note">No matching models in this group.</p>
                 )}
@@ -468,7 +548,9 @@ export function NodesPage() {
             <div className="node-utilization">
               <div className="progress-caption">
                 <span>COMPUTE UTILIZATION</span>
-                <b>{n.utilization}%</b>
+                <b>
+                  {API_MODE === 'http' ? 'Unavailable' : `${n.utilization}%`}
+                </b>
               </div>
               <Progress
                 value={n.utilization}
@@ -478,7 +560,7 @@ export function NodesPage() {
             <dl className="node-specs">
               <div>
                 <dt>MEMORY</dt>
-                <dd>{n.memory} GB</dd>
+                <dd>{n.memory ? `${n.memory} GB` : 'Not configured'}</dd>
               </div>
               <div>
                 <dt>ACCELERATOR</dt>

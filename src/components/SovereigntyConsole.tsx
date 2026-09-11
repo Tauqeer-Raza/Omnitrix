@@ -8,6 +8,7 @@ import {
 import { useApp } from '../state/AppContext';
 import { time } from './common';
 import type { Task } from '../types';
+import { API_MODE } from '../api/transport';
 export default function SovereigntyConsole({
   compact = false,
   task,
@@ -35,9 +36,12 @@ export default function SovereigntyConsole({
       </div>
       <div className="console-network">
         <div>
-          <span className="eyebrow">EXTERNAL CALLS</span>
+          <span className="eyebrow">
+            {API_MODE === 'mock' ? 'EXTERNAL CALLS' : 'NETWORK TELEMETRY'}
+          </span>
           <strong>
-            0<span>↗</span>
+            {API_MODE === 'mock' ? '0' : '—'}
+            <span>↗</span>
           </strong>
         </div>
         <div className="network-small">
@@ -54,14 +58,16 @@ export default function SovereigntyConsole({
           <i />
           SOVEREIGN MODE
         </span>
-        <span className="mono">AIR-GAPPED</span>
+        <span className="mono">
+          {API_MODE === 'mock' ? 'AIR-GAPPED' : 'SELF-HOSTED'}
+        </span>
       </div>
       <div className="local-checks">
         {[
           'Local inference',
           'Local knowledge',
           'Local files',
-          'Local execution',
+          API_MODE === 'mock' ? 'Local execution' : 'Local control plane',
         ].map((label) => (
           <div key={label}>
             <Check size={13} />
@@ -92,9 +98,15 @@ export default function SovereigntyConsole({
             </div>
             <dl>
               <dt>SELECTED MODEL</dt>
-              <dd>{model?.name}</dd>
+              <dd>{task?.route?.selectedModel ?? model?.servedModel ?? model?.name}</dd>
+              <dt>ROUTING BASIS</dt>
+              <dd>{task?.plan?.routingReason ?? 'Waiting for classification'}</dd>
               <dt>FALLBACK</dt>
-              <dd>{fallback?.name}</dd>
+              <dd>
+                {fallback?.configured === false
+                  ? 'Not configured'
+                  : fallback?.servedModel ?? fallback?.name}
+              </dd>
               <dt>COMPUTE NODE</dt>
               <dd className="orange">{node?.name ?? 'Available local node'}</dd>
             </dl>
@@ -130,7 +142,9 @@ export default function SovereigntyConsole({
       )}
       <div className="console-footer">
         <span className="status-dot" />
-        NO DATA LEAVES THIS ENVIRONMENT
+        {API_MODE === 'mock'
+          ? 'NO DATA LEAVES THIS ENVIRONMENT'
+          : 'NETWORK VERIFICATION NOT CONFIGURED'}
         <ShieldCheck size={13} />
       </div>
     </aside>

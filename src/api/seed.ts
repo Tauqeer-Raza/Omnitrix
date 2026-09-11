@@ -78,6 +78,13 @@ tasks[1].events = historical.map((e) => ({
 }));
 export function createSeed(): Database {
   return structuredClone({
+    orchestrator: {
+      model: 'Demo 2B orchestrator',
+      nodeId: 'control-plane',
+      configured: true,
+      endpointHost: 'localhost',
+      role: 'Intent classification and workflow planning',
+    },
     users: [
       {
         id: 'usr-01',

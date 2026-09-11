@@ -161,10 +161,11 @@ export const taskEvents = {
     taskId: string,
     onEvent: (event: AgentEvent) => void,
     onError?: (error: Error) => void,
+    after?: string,
   ) {
     if (API_MODE === 'http') {
       const source = new EventSource(
-        `${API_BASE}/tasks/${encodeURIComponent(taskId)}/stream`,
+        `${API_BASE}/tasks/${encodeURIComponent(taskId)}/stream${after ? `?after=${encodeURIComponent(after)}` : ''}`,
         { withCredentials: true },
       );
       source.onmessage = (e) => {

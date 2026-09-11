@@ -86,6 +86,7 @@
 }
 .status-completed,
 .status-online,
+.status-configured,
 .status-indexed,
 .status-success {
   color: #536541;
@@ -97,10 +98,12 @@
 }
 .status-queued,
 .status-offline,
+.status-unconfigured,
 .status-disabled {
   color: #666c5a;
 }
 .status-failed,
+.status-model_missing,
 .status-degraded {
   color: #985035;
 }

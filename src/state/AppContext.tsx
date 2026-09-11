@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useEffectEvent,
   useState,
   useCallback,
   type ReactNode,
@@ -11,7 +12,7 @@ import { authApi } from '../api/auth';
 import { systemApi } from '../api/system';
 import { initializeStore, subscribeStore, ApiError } from '../api/store';
 import { API_MODE } from '../api/transport';
-import { startEventEngine } from '../api/events';
+import { startEventEngine, taskEvents } from '../api/events';
 import { toast } from 'sonner';
 interface AppState {
   user: User | null;
@@ -33,6 +34,65 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const userId = user?.id;
+  const activeTaskIds =
+    data?.tasks
+      .filter((t) => ['queued', 'running'].includes(t.status))
+      .map((t) => t.id)
+      .sort()
+      .join(',') ?? '';
+  const subscribeLiveTasks = useEffectEvent(() => {
+    const stops =
+      data?.tasks
+        .filter((t) => ['queued', 'running'].includes(t.status))
+        .map((task) =>
+          taskEvents.subscribe(
+            task.id,
+            (event) => {
+              setData((previous) =>
+                previous
+                  ? {
+                      ...previous,
+                      tasks: previous.tasks.map((t) => {
+                        if (
+                          t.id !== event.taskId ||
+                          t.events.some((e) => e.id === event.id)
+                        )
+                          return t;
+                        const terminal =
+                          event.type === 'task_completed' ||
+                          event.type === 'task_failed';
+                        return {
+                          ...t,
+                          events: [...t.events, event],
+                          ...(event.delta
+                            ? { reply: (t.reply ?? '') + event.delta }
+                            : {}),
+                          status: terminal
+                            ? event.type === 'task_completed'
+                              ? ('completed' as const)
+                              : ('failed' as const)
+                            : ('running' as const),
+                        };
+                      }),
+                    }
+                  : previous,
+              );
+              if (
+                event.type === 'task_completed' ||
+                event.type === 'task_failed'
+              )
+                void refresh();
+            },
+            undefined,
+            task.events.at(-1)?.id,
+          ),
+        ) ?? [];
+    return () => stops.forEach((stop) => stop());
+  });
+  useEffect(() => {
+    if (API_MODE === 'http' && userId && activeTaskIds)
+      return subscribeLiveTasks();
+  }, [activeTaskIds, userId]);
   const refresh = useCallback(async () => {
     try {
       const next = await systemApi.getStatus();

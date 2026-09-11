@@ -1489,6 +1489,7 @@ time,
 }
 .status-queued,
 .status-disabled,
+.status-unconfigured,
 .status-offline {
   background: #d8d9cf57;
   color: #868978;
@@ -1496,16 +1497,19 @@ time,
 }
 .status-queued .status-dot,
 .status-disabled .status-dot,
+.status-unconfigured .status-dot,
 .status-offline .status-dot {
   background: #94977f;
 }
 .status-failed,
+.status-model_missing,
 .status-degraded {
   background: #e9b89833;
   border-color: #a86d4c55;
   color: #9b5938;
 }
 .status-failed .status-dot,
+.status-model_missing .status-dot,
 .status-degraded .status-dot {
   background: #b77852;
 }

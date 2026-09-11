@@ -1,63 +1,77 @@
-# FastAPI integration contract
+# OMNITRIX FastAPI wire contract
 
-Base path: `/api/v1`. Configure a same-origin reverse proxy and secure HttpOnly session cookies. The HTTP transport sends `credentials: include`; the mock `token` field is illustrative and is never treated as production authorization. Configure cookie SameSite, CSRF protection, allowed origins and session expiry on the backend. Do not trust browser-provided role or ownership fields.
+Implemented in `BACKEND/app`, under `/api/v1`. TypeScript payloads live in `src/types.ts`. See [backend setup](../BACKEND/README.md) for architecture, provider protocols and deployment.
 
-TypeScript records in `src/types.ts` describe the wire payloads. Dates are ISO 8601; IDs are opaque strings. JSON errors use `{ "code": "RESOURCE_LIMIT", "detail": "Readable explanation" }`. Use 401 for missing sessions, 403 for denied actions, 404 for inaccessible records, 409 for state conflicts, 413 for oversized uploads and 422 for validation failures.
+## Authentication
 
-| Method | Endpoint                     | Contract                                                                                                                 |
-| ------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| POST   | `/auth/login`                | `{email,password}` → `{user,token}`; establish server session                                                            |
-| GET    | `/auth/me`                   | Authenticated `User`                                                                                                     |
-| POST   | `/auth/logout`               | End session; 204                                                                                                         |
-| GET    | `/system/snapshot`           | Authorized `Database`-shaped view. Filter users, documents, tasks and audit before sending                               |
-| PATCH  | `/system/settings`           | Partial `Settings` → stored settings; admin only                                                                         |
-| POST   | `/system/reconnect`          | Recheck local service availability                                                                                       |
-| POST   | `/tasks`                     | `{prompt,title?,type?,conversationId?,documentIds,scenario}` → `Task`; derive owner server-side. `scenario` is demo-only |
-| GET    | `/tasks/:id`                 | Authorized `Task`                                                                                                        |
-| GET    | `/tasks/:id/events`          | `AgentEvent[]`                                                                                                           |
-| GET    | `/tasks/:id/stream`          | Authenticated SSE; cancel on disconnect, resume by event ID                                                              |
-| POST   | `/tasks/:id/retry`           | Retry failed run with quota/permission validation                                                                        |
-| POST   | `/tasks/:id/cancel`          | Cancel active task                                                                                                       |
-| GET    | `/tasks/:id/outputs/:format` | Binary `docx`, `pdf`, `xlsx`, `pptx`; authorized completed runs only                                                     |
-| POST   | `/documents`                 | Multipart `file` plus `knowledge` boolean → `LocalDocument`                                                              |
-| GET    | `/documents`                 | Authorized `LocalDocument[]`                                                                                             |
-| GET    | `/documents/:id/file`        | Binary original file, safely served inline or as an attachment                                                           |
-| DELETE | `/documents/:id`             | Check ownership, retention policy, and active task references                                                            |
-| POST   | `/documents/sample`          | Demo-only sample creation                                                                                                |
-| GET    | `/knowledge/search?q=…`      | `{document,page,relevance,content}[]`, with source authorization                                                         |
-| GET    | `/models`                    | `Model[]`                                                                                                                |
-| PATCH  | `/models/:id`                | Enabled, priority, nodeId, role or context; admin only                                                                   |
-| GET    | `/routing`                   | `RoutingRule[]`                                                                                                          |
-| PATCH  | `/routing/:id`               | Distinct primary/fallback IDs within the same model group; admin only                                                    |
-| POST   | `/nodes`                     | Generic node registration → `ComputeNode`; admin only                                                                    |
-| PATCH  | `/nodes/:id`                 | Node configuration/status; admin only                                                                                    |
-| GET    | `/users`                     | `User[]`; admin only                                                                                                     |
-| POST   | `/users`                     | `{name,email,department}` → provisioned `User`; admin only                                                               |
-| PATCH  | `/users/:id`                 | Access, allocation and account metadata; reject arbitrary immutable fields                                               |
-| GET    | `/users/me/allocation`       | Current `User` allocation view                                                                                           |
-| GET    | `/audit`                     | Authorized `AuditEvent[]`                                                                                                |
+The frontend uses a same-origin proxy and `credentials: include`. Login sets an opaque HttpOnly `omnitrix_session` cookie and readable `omnitrix_csrf` cookie. The server stores hashes. Authenticated mutations include `X-CSRF-Token` from the readable cookie. Mutations must have an allowed Origin, or `X-Requested-With: Omnitrix` when Origin is absent. The frontend sends both headers. Production requires HTTPS, secure cookies and explicit origins/hosts.
 
-Event envelope:
+Login returns `{user, token: "", csrfToken}` for compatibility; the empty token field is not a bearer credential. Logout revokes the session and expires cookies. Never send role or ownership claims as authentication. `GET /knowledge/search` also requires the CSRF header because embedding queries consume tokens.
 
-```json
-{
-  "id": "evt-opaque-id",
-  "taskId": "tsk-opaque-id",
-  "type": "rag_search",
-  "step": "rag_search",
-  "status": "running",
-  "message": "Searching local knowledge base",
-  "timestamp": "2026-09-08T06:30:00Z",
-  "model": "Nominic Embed text"
-}
+Errors use `{ "code": "RESOURCE_LIMIT", "detail": "Readable explanation" }`. Statuses include 401 unauthenticated, 403 forbidden, 404 unavailable resource, 409 conflict, 413 oversized body, 422 validation, 429 quota/throttling and 502/503 provider/configuration failure. Unknown mutation fields are rejected. Validation does not echo input secrets.
+
+## Endpoints
+
+| Method | Endpoint | Behavior |
+| --- | --- | --- |
+| POST | `/auth/login` | `{email,password}` → session envelope; throttled |
+| GET | `/auth/me` | Current authorized User |
+| POST | `/auth/logout` | Revoke session; 204 |
+| GET | `/system/snapshot` | Authorized Database view of tasks, users, documents, registry, policy and telemetry |
+| GET | `/system/providers/health` | Probe configured local `/v1/models` registries; returns model availability and latency without inference |
+| PATCH | `/system/settings` | Writable policy fields only; admin |
+| POST | `/system/reconnect` | Clear processing pause; admin; does not probe providers |
+| POST | `/tasks` | `{prompt,title?,conversationId?,documentIds?,scenario?:"normal"}` → queued task; 201 |
+| GET | `/tasks/{id}` | Authorized task with events, reply, citations and usage |
+| GET | `/tasks/{id}/events` | AgentEvent[] in sequence order |
+| GET | `/tasks/{id}/stream` | Authenticated SSE; optional after query or Last-Event-ID header |
+| POST | `/tasks/{id}/retry` | Retry latest failed turn with quota/permission checks; 204 |
+| POST | `/tasks/{id}/cancel` | Stop active work, retain consumed usage; 204 |
+| GET | `/tasks/{id}/outputs/{format}` | Completed answer exported as docx, pdf, xlsx, pptx or txt; binary |
+| POST | `/documents` | Multipart file, knowledge boolean → document with indexing queued; 201 |
+| GET | `/documents` | Authorized LocalDocument[] |
+| GET | `/documents/{id}/file` | Authorized original bytes |
+| POST | `/documents/{id}/reindex` | Requeue indexing after access, quota and active-reference checks |
+| DELETE | `/documents/{id}` | Owner/admin deletion, blocked during active use; 204 |
+| POST | `/documents/sample` | Explicit 404 DEMO_ONLY; no synthetic backend documents |
+| GET | `/knowledge/search?q=…` | `{document,page,relevance,content}[]`; real authorized sources; embedding usage charged |
+| GET | `/models` | Model registry |
+| PATCH | `/models/{id}` | enabled, priority, nodeId, role, context; admin |
+| GET | `/routing` | Routing rules |
+| PATCH | `/routing/{id}` | primaryId, fallbackId, strategy; distinct models in same group; admin |
+| POST | `/nodes` | name, host, type, accelerator, memory, capacity, status; admin; 201 |
+| PATCH | `/nodes/{id}` | Writable metadata and status; admin |
+| GET | `/users` | Organization users, without secret hashes; admin |
+| POST | `/users` | `{name,email,department,password}` → operator account; admin; 201 |
+| PATCH | `/users/{id}` | Name, department, role, permissions, modelAccess, limits, enabled or password; admin |
+| GET | `/users/me/allocation` | User and UTC daily/monthly usage |
+| GET | `/audit?limit=1000` | Recent SQL audit events; admin; limit capped at 5,000 |
+
+Outside the API prefix: `GET /health/live` and `GET /health/ready`. Development schema: `/api/v1/openapi.json`. Hosted Swagger/ReDoc UI is disabled to avoid runtime CDN dependencies.
+
+## Conversations and streaming
+
+The composer omits a type. A legacy optional type is accepted but does not control routing; the orchestrator chooses general, document or code. Only normal scenarios are allowed in live mode. A root task ID is also its conversation ID. Follow-ups include that ID, inherit attachments when none are specified, and retain the conversation title. The server authorizes the conversation and rejects overlapping active turns. Both classification and generation use only earlier completed turns with nonempty replies from the same conversation and owner, retaining at most 12 turns within `MAX_HISTORY_CHARS`. Trimming removes complete question/answer pairs. Failed/cancelled turns and partial failed answers remain visible in saved tasks but are excluded from model context. Only the latest failed/cancelled turn can be retried; retry sends that prompt as the current request.
+
+Task statuses are queued, running, completed, failed. Cancellation is a failed terminal state with a readable error. After classification, each task includes a deterministic `plan` with `classificationSource`, the valid `orchestratorType` when available, a routing reason, route group, requested capabilities and ordered public steps. The boundary normalizes common JSON wrappers and intent aliases. Malformed output receives a deterministic recovery plan only for explicit code/calculation intent or an attached document; ambiguous malformed plans fail. Once dispatched, `route` records the selected served model, node, strategy, fallback state and route decision. Completed results also include reply, citations, optional code, reviewRequired and `executionStatus: "not_executed"`. Document indexing is a separate durable job reflected in LocalDocument.status and .error.
+
+Managed Ollama orchestrators receive an enforced schema with the required routing fields `type` and `use_knowledge`; public plan descriptions are constructed by the backend. The model request uses a compact, self-contained classification instruction and only the current request plus successful prior-turn context. Other OpenAI-compatible orchestrators retain JSON-object response mode.
+
+SSE uses default message events with id and JSON data fields:
+
+```text
+id: evt-opaque-id
+data: {"id":"evt-opaque-id","taskId":"tsk-opaque-id","type":"response_delta","step":"response_delta","status":"running","message":"Receiving the local response.","timestamp":"2026-09-10T00:00:00Z","planStepId":"generate","delta":"Response text"}
 ```
 
-Supported events: task_started, task_classified, model_routed, ocr_started, ocr_completed, rag_search, agent_reasoning, model_inference, context_prepared, response_generated, document_generated, sandbox_started, test_passed, test_failed, task_completed, task_failed. Send operational summaries and public tool events, never hidden model chain-of-thought. `taskEvents.subscribe()` can replace polling when the backend is available. The initial HTTP application snapshot currently refreshes every four seconds; SSE is an independent prepared adapter.
+Current task events: task_started, task_classified, rag_search, context_prepared, model_routed, response_started, model_retry, response_delta, review_required, task_completed and task_failed. `planStepId` connects an event to the public plan; model, group, node, tool and routing reason are optional operational metadata. Events contain operational summaries, not hidden reasoning or fabricated sandbox outcomes.
 
-Production completion must be an authoritative, idempotent state transition: account for resource reservations, cancellation, fallback selection and charging in backend transactions. The UI displays server telemetry; it must not calculate proof of network isolation. Return capability metadata for compatible model/node scheduling rather than inferring compatibility from node type or vendor.
+The frontend subscribes to active tasks, resumes after the last persisted event, deduplicates IDs and appends deltas. Terminal events trigger an authoritative snapshot refresh. Four-second polling refreshes allocations and document indexing. Streams close after terminal delivery or revoked/expired access. Disconnecting delivery does not cancel a durable task; use /cancel.
 
-## Unified chat contract
+## Visibility and administrative contracts
 
-The operator composer omits `type`. The server orchestrator returns a `Task.type` of `general`, `document`, or `code`. A first request receives `conversationId` equal to its root task ID. Follow-up requests include that ID; the server must authorize the conversation, load its messages and attachments, and reject overlapping requests within the same conversation. Return readable assistant text in `Task.reply` on completion. Completed document and code tasks also expose their existing output endpoints.
+Snapshots filter task ownership, users and private documents. Shared knowledge requires knowledge permission. Audit snapshots and /audit are admin-only. Role and capability checks are both enforced. Updates cannot set IDs, usage counters or other immutable fields. Admin-created accounts require an individual 12–128 character password.
 
-Snapshots must include authorized conversation history in `tasks`. Legacy tasks without `conversationId` are treated as independent conversations. New messages inherit previous attachments when none are added. Retries apply only to the latest failed or cancelled message. Persist the conversation title from its root request. The frontend groups and sorts messages from this snapshot and hides execution details by default once processing ends.
+Telemetry mode is live; networkVerified and hardwareMetricsAvailable are false. usageHourly and usageDaily contain `{label,tokens}` UTC ledger buckets. localRequests counts recorded model-usage entries, not network traffic. Node status and hardware metadata reflect admin configuration. Utilization is unavailable; the live UI must not turn it into a zero measurement.
+
+Registry aliases bind to model endpoints through the backend environment. At startup, built-in registry entries are reconciled with the configured served model IDs and sanitized endpoint hosts. Unconfigured slots are disabled and cannot be enabled through the API. The provider-health endpoint checks each unique configured registry URL once and reports online, offline or model-missing state. Node host metadata never controls outbound URLs. Librarian routing is bound by EMBEDDING_REGISTRY_ID. Embedding-model changes require reindexing, so cross-model fallback is not automatic. Policy seeds from environment for a new database, then persists in SQL. Pause/resume keeps administration accessible. Retention is stored policy; there is no automatic deletion job in this release.

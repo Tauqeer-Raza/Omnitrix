@@ -13,6 +13,7 @@ import { Slider } from '@/components/ui/slider';
 import { useApp } from '../../state/AppContext';
 import { userApi } from '../../api/users';
 import { systemApi } from '../../api/system';
+import { API_MODE } from '../../api/transport';
 
 import {
   MODEL_GROUPS,
@@ -43,6 +44,7 @@ export function UsersPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [department, setDepartment] = useState('Engineering');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   return (
@@ -141,7 +143,11 @@ export function UsersPage() {
         open={open}
         onClose={() => setOpen(false)}
         title="Add organizational user"
-        description="The new account uses the demo password Omnitrix@2026. Production provisioning belongs to FastAPI."
+        description={
+          API_MODE === 'mock'
+            ? 'The new account uses the demo password Omnitrix@2026.'
+            : 'Create an organizational account with an individual password.'
+        }
       >
         <form
           className="form-stack"
@@ -150,11 +156,17 @@ export function UsersPage() {
             setBusy(true);
             setError('');
             try {
-              await userApi.create(name, email, department);
+              await userApi.create(
+                name,
+                email,
+                department,
+                API_MODE === 'http' ? password : undefined,
+              );
               await act(async () => true, 'User created');
               setOpen(false);
               setName('');
               setEmail('');
+              setPassword('');
             } catch (e) {
               setError((e as Error).message);
             } finally {
@@ -187,6 +199,20 @@ export function UsersPage() {
               onChange={(e) => setDepartment(e.target.value)}
             />
           </label>
+          {API_MODE === 'http' && (
+            <label>
+              Initial password
+              <input
+                type="password"
+                autoComplete="new-password"
+                minLength={12}
+                maxLength={128}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </label>
+          )}
           {error && <ErrorMessage message={error} />}
           <div className="modal-actions">
             <Button type="button" onClick={() => setOpen(false)}>
@@ -204,7 +230,7 @@ export function UsersPage() {
 const permissionLabels: Record<Permission, string> = {
   documents: 'Document access',
   knowledge: 'Knowledge access',
-  code: 'Code execution',
+  code: API_MODE === 'http' ? 'Code generation' : 'Code execution',
   tasks: 'Agent workflows',
   audit: 'Audit visibility',
   admin: 'Infrastructure administration',
@@ -739,18 +765,28 @@ export function SettingsPage() {
             />
           </div>
           <p className="note">
-            Retention and execution timeout are stored as backend policy
-            configuration. The browser demo does not enforce retention deletion.
+            {API_MODE === 'http'
+              ? 'The backend enforces task timeouts. Audit retention is a stored policy; automatic deletion is not enabled.'
+              : 'Retention and execution timeout are stored as backend policy configuration. The browser demo does not enforce retention deletion.'}
           </p>
         </section>
         <section className="panel form-stack">
-          <SectionHeading label="DEMO SERVICE CONTROLS" />
+          <SectionHeading
+            label={
+              API_MODE === 'http'
+                ? 'PROCESSING CONTROLS'
+                : 'DEMO SERVICE CONTROLS'
+            }
+          />
           <div className="toggle-row">
             <label htmlFor="offline-mode">
-              Simulate backend unavailable
+              {API_MODE === 'http'
+                ? 'Pause task processing'
+                : 'Simulate backend unavailable'}
               <small>
-                Pause event processing and make service requests fail. Settings
-                remains available to reconnect.
+                {API_MODE === 'http'
+                  ? 'Stop active processing and hold queued work. Resume here when services are ready.'
+                  : 'Pause event processing and make service requests fail. Settings remains available to reconnect.'}
               </small>
             </label>
             <Switch
@@ -761,12 +797,16 @@ export function SettingsPage() {
           </div>
           <div className="settings-architecture">
             <span className="eyebrow">INTEGRATION BOUNDARY</span>
-            <p>React UI → typed API services → mock adapter / FastAPI</p>
-            <code>VITE_API_MODE=mock</code>
             <p>
-              The mock adapter uses this browser’s local storage. Production
-              authentication, access control, inference, file processing,
-              network isolation and sandboxing must be provided by the backend.
+              {API_MODE === 'http'
+                ? 'React UI → FastAPI → local inference workers'
+                : 'React UI → typed API services → mock adapter / FastAPI'}
+            </p>
+            <code>VITE_API_MODE={API_MODE}</code>
+            <p>
+              {API_MODE === 'http'
+                ? 'The control plane owns accounts, files, routing, usage and audit records. Model endpoints are configured by the deployment administrator in BACKEND/.env.'
+                : 'The mock adapter uses this browser’s local storage. Production authentication, access control, inference, file processing, network isolation and sandboxing must be provided by the backend.'}
             </p>
           </div>
         </section>

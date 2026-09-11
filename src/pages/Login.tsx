@@ -10,9 +10,12 @@ import {
 import { useApp } from '../state/AppContext';
 import { Brand, Button, ErrorMessage } from '../components/common';
 import Core from '../components/Core';
+import { API_MODE } from '../api/transport';
 export default function Login() {
   const { user, login } = useApp();
-  const [email, setEmail] = useState('operator@omnitrix.local');
+  const [email, setEmail] = useState(
+    API_MODE === 'mock' ? 'operator@omnitrix.local' : '',
+  );
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -119,25 +122,29 @@ export default function Login() {
             {busy ? 'Verifying credentials…' : 'Sign in securely'}
             <ArrowRight size={17} />
           </Button>
-          <div className="demo-credentials">
-            <span className="eyebrow">LOCAL DEMO ACCOUNTS</span>
-            <p>
-              <b>Operator</b>
-              <code>operator@omnitrix.local</code>
-            </p>
-            <p>
-              <b>Administrator</b>
-              <code>admin@omnitrix.local</code>
-            </p>
-            <p className="demo-password">
-              Password for both: <code>Omnitrix@2026</code>
-            </p>
-            <small>Your account determines access automatically.</small>
-          </div>
+          {API_MODE === 'mock' && (
+            <div className="demo-credentials">
+              <span className="eyebrow">LOCAL DEMO ACCOUNTS</span>
+              <p>
+                <b>Operator</b>
+                <code>operator@omnitrix.local</code>
+              </p>
+              <p>
+                <b>Administrator</b>
+                <code>admin@omnitrix.local</code>
+              </p>
+              <p className="demo-password">
+                Password for both: <code>Omnitrix@2026</code>
+              </p>
+              <small>Your account determines access automatically.</small>
+            </div>
+          )}
         </form>
         <p className="login-bottom">
           <ShieldCheck size={14} />
-          Mock environment · synthetic operational data
+          {API_MODE === 'mock'
+            ? 'Mock environment · synthetic operational data'
+            : 'Organization-managed access · local control plane'}
         </p>
       </section>
     </main>

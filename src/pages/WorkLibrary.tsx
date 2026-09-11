@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../state/AppContext';
 import { documentApi } from '../api/documents';
+import { API_MODE } from '../api/transport';
 import {
   Button,
   PageHeader,
@@ -95,8 +96,9 @@ export function DocumentsPage() {
       />
       <p className="note">
         <ShieldCheck size={14} />
-        Files are local to this browser in demo mode. Generated deliverables are
-        available from completed tasks.
+        {API_MODE === 'http'
+          ? 'Files are stored on the local control plane. Open a file to see its indexing status.'
+          : 'Files are local to this browser in demo mode. Generated deliverables are available from completed tasks.'}
       </p>
     </>
   );
@@ -110,7 +112,11 @@ export function CodeTasksPage() {
       <PageHeader
         eyebrow="WORK / CODE"
         title="Code tasks"
-        description="Local calculations, reproducible scripts, and sandbox execution records."
+        description={
+          API_MODE === 'http'
+            ? 'Generated scripts and their review history.'
+            : 'Local calculations, reproducible scripts, and sandbox execution records.'
+        }
         action={
           <Button
             primary
@@ -252,14 +258,18 @@ export function KnowledgePage() {
         <div className="knowledge-results">
           <div className="section-heading">
             <span className="eyebrow">{results.length} LOCAL RESULTS</span>
-            <small className="muted">Synthetic search index</small>
+            <small className="muted">
+              {API_MODE === 'http'
+                ? 'Local knowledge index'
+                : 'Synthetic search index'}
+            </small>
           </div>
           {results.length ? (
-            results.map((r) => (
+            results.map((r, i) => (
               <Link
                 to={`/workspace/documents/${r.document.id}`}
                 className="knowledge-result"
-                key={r.document.id}
+                key={`${r.document.id}-${r.page}-${i}`}
               >
                 <div>
                   <FileText size={19} />
@@ -321,14 +331,19 @@ export function KnowledgePage() {
       )}
       <p className="note">
         <ShieldCheck size={14} />
-        Indexed content is simulated in this demo. Original uploads remain
-        available in the local document library.
+        {API_MODE === 'http'
+          ? 'Search uses indexed text from your uploaded files. Open a document to review indexing errors or retry.'
+          : 'Indexed content is simulated in this demo. Original uploads remain available in the local document library.'}
       </p>
       <Modal
         open={add}
         onClose={() => setAdd(false)}
         title="Add local knowledge"
-        description="Upload organizational documents. The demo indexes synthetic content."
+        description={
+          API_MODE === 'http'
+            ? 'Upload organizational documents for local extraction and indexing.'
+            : 'Upload organizational documents. The demo indexes synthetic content.'
+        }
       >
         <FileUploader documents={files} onChange={setFiles} knowledge />
         <div className="modal-actions">

@@ -1,0 +1,36 @@
+.live-result-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.live-result-layout .chat-answer-text {
+  margin: 20px 0;
+}
+.live-result-layout .note {
+  margin-top: 18px;
+}
+.live-result-layout .context-item {
+  overflow-wrap: anywhere;
+}
+.live-code-output {
+  margin-top: 28px;
+}
+.live-code-output pre {
+  background: #3d4241;
+  color: #e7e7e4;
+  padding: 20px;
+  border-radius: 6px;
+  overflow: auto;
+  font:
+    12px/1.8 Consolas,
+    monospace;
+}
+.live-result-layout .inline-actions {
+  flex-wrap: wrap;
+}
+@media (max-width: 900px) {
+  .live-result-layout {
+    grid-template-columns: 1fr;
+  }
+}

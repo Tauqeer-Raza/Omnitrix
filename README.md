@@ -1,8 +1,23 @@
 # OMNITRIX — Sovereign AI Workbench
 
-A working React 19 + TypeScript frontend for a local agentic AI workbench. Vite serves a client-routed SPA; there is no required cloud service, remote font, or external inference dependency. The generated Sites UI primitives are retained, while the runtime is a frontend-only Vite application for self-hosting and future FastAPI integration.
+A React 19 + TypeScript frontend and a FastAPI backend for a local agentic AI workbench. The frontend preserves its standalone demo mode. `BACKEND/` implements the control plane, authenticated APIs, orchestration, local document retrieval, streaming responses, usage accounting and administration, following the Jetson TX2 → private LAN → three inference-worker architecture.
 
-## Run locally
+## Use the FastAPI backend
+
+See [BACKEND/README.md](BACKEND/README.md) for complete Windows/Linux setup, model protocols, account provisioning and deployment. Python 3.11+ is required. Model endpoints and keys are blank in [BACKEND/.env.example](BACKEND/.env.example), with an ignored `.env` prepared for this workspace.
+
+```powershell
+cd D:\Omnitrix\BACKEND
+# A Python 3.13 .venv is already installed in this workspace; do not recreate it.
+.\.venv\Scripts\python.exe -m app.cli create-admin --email admin@omnitrix.local
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1
+```
+
+In a second terminal, copy the root `.env.example` to `.env.local` (merge instead if one exists), then run `npm run dev`. This selects HTTP mode and proxies `/api` to port 8000. Provision your own backend password; the demo accounts below apply only to mock mode. Model requests produce configuration errors until the required local endpoints are configured. If nodes were initially seeded offline, enable them through Admin → Compute infrastructure after configuring their endpoints.
+
+The backend stores real records in SQL and original files on the control plane. Existing browser demo records are not imported. The frontend design remains the same; live mode uses real response text, citations, exports, streaming activity and recorded token usage. Code is generated for review and is not automatically executed. Physical network isolation and hardware utilization are marked unavailable until monitoring is configured.
+
+## Run the standalone frontend demo
 
 Requires Node 22.13+ and npm.
 
@@ -34,7 +49,7 @@ The production bundle is `dist/`. Serve it from any internal static web server w
 2. Use **Attach files** for PDF/PNG/JPG/DOCX inputs (20 MB each, up to 10), or **Try with a sample report**. The activity panel and sovereignty console appear alongside a running request and close when it finishes. Reopen them with **View activity**. Open a generated result or download Word/PDF from the answer; Excel and PowerPoint exports remain in the full document result.
 3. Ask for a calculation to open the code workflow automatically. Inspect/edit the sample Python source, switch to unit tests, copy/download files, and run sample structure checks from the result. The browser does not execute arbitrary code. Download both Python files to run the real unit tests locally.
 4. Continue with a follow-up in the same conversation. **New chat** starts a separate conversation. Recent chats and search live in the sidebar; **Knowledge Base** and **Agent Runs** are in the top navigation. The sidebar AI resource panel shows tokens used, remaining, and daily allocation. Operator audit navigation is removed; audit administration remains available to admins. Stop/retry controls handle interrupted requests. Admin **Settings** can simulate a backend outage; service tests cover retrieval and sandbox failure scenarios.
-5. Sign in as Administrator. Enable/disable models, expand and edit priority/node/context metadata, swap routing primaries and fallbacks, register arbitrary compute nodes, or change node status. New task steps use updated registry state.
+5. Sign in as Administrator. Open **Local models** and use **Check services** to verify configured model IDs against each local provider. Enable/disable configured models, edit priority/node/context metadata, swap routing primaries and fallbacks, register compute nodes, or change node status. New tasks persist the orchestrator plan, routing reason, selected served model and node.
 6. Change global, department, and user allocation in **Token & resource limits**. Inspect account capabilities and model-group access in **Users** or **Permissions**. Changes immediately affect new task admission and appear in audit logs.
 
 ## Implementation boundary
@@ -43,7 +58,7 @@ The production bundle is `dist/`. Serve it from any internal static web server w
 src/
   api/            Typed auth, task, file, model, routing, user, audit and system services
     transport.ts  Central JSON HTTP/mock selection, error handling and credentials
-    events.ts     Mock event engine and future authenticated SSE subscription
+    events.ts     Mock event engine and authenticated resumable SSE subscription
     orchestrator.ts Demo intent routing and conversational sample responses
     store.ts      Browser-local mock persistence and permission enforcement
     seed.ts       Explicitly synthetic sample records
@@ -58,11 +73,11 @@ app/              Shared design tokens and responsive operational styles
 tests/            Service and rendered-route regression coverage
 ```
 
-No components call fetch. Services expose Promise-based methods, so the UI does not depend on transport details. The unified composer submits a prompt, attachment IDs, and optional conversation ID without a task type. Mock routing uses simple intent rules; a production orchestrator must perform classification and use conversation history. Set `VITE_API_MODE=http` and `VITE_API_BASE_URL=/api/v1` at build time to use FastAPI. The HTTP boundary is implemented; a FastAPI server implementing the documented contracts is still required. File endpoints return binary responses. See `docs/FASTAPI_CONTRACT.md` for endpoints and event semantics.
+Services expose Promise-based methods. The unified composer submits a prompt, attachment IDs, and optional conversation ID without a task type. Mock routing uses simple intent rules; FastAPI calls the configured small orchestrator and includes conversation context. Set `VITE_API_MODE=http` and `VITE_API_BASE_URL=/api/v1` at build time to use the included backend. File endpoints return binary responses. See [docs/FASTAPI_CONTRACT.md](docs/FASTAPI_CONTRACT.md) for endpoints and event semantics.
 
-`hasRole`, `hasPermission`, protected routes, ownership checks, admin role checks and service guards provide realistic demo behavior. They are not a production security boundary: every JavaScript value and browser storage record can be modified by the browser user. Production authorization must be enforced by FastAPI on every endpoint and stream.
+`hasRole`, `hasPermission`, protected routes and service guards control frontend navigation and demo behavior. In HTTP mode, FastAPI separately enforces server-side sessions, CSRF protection, permissions and ownership on endpoints and streams; browser state never grants authority.
 
-## Local data and honest simulation
+## Mock-mode data and simulation
 
 - Operational mock state persists in `localStorage` under `omnitrix.demo.v1`; sign-in identity is session-local. File blobs live in IndexedDB `omnitrix-local-files`, with an in-memory fallback when unavailable.
 - OCR, RAG results, model output, network metrics, chart history, compute utilization and sandbox execution are simulated. Uploaded content is displayed when supported, but is not analyzed by an AI engine. Every generated report is a synthetic draft and cannot certify safety or approve operations.

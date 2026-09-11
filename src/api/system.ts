@@ -1,5 +1,10 @@
-import type { Database, Settings, ComputeNode } from '../types';
-import { endpoint } from './transport';
+import type {
+  Database,
+  Settings,
+  ComputeNode,
+  ProviderHealth,
+} from '../types';
+import { API_MODE, endpoint } from './transport';
 import { mockReply } from './orchestrator';
 import {
   actor,
@@ -40,7 +45,22 @@ export const systemApi = {
     endpoint(
       'PATCH',
       '/system/settings',
-      settings,
+      API_MODE === 'http'
+        ? Object.fromEntries(
+            Object.entries(settings).filter(([key]) =>
+              [
+                'organization',
+                'dailyLimit',
+                'monthlyLimit',
+                'retentionDays',
+                'timeout',
+                'offline',
+                'departmentLimits',
+                'requireReview',
+              ].includes(key),
+            ),
+          )
+        : settings,
       () => {
         authorize('admin');
         if (
@@ -56,6 +76,61 @@ export const systemApi = {
           log(d, 'SETTINGS_CHANGED', 'Organization policies');
         });
         return getStore().settings;
+      },
+      true,
+    ),
+  checkProviders: () =>
+    endpoint<ProviderHealth[]>(
+      'GET',
+      '/system/providers/health',
+      undefined,
+      () => {
+        const data = getStore();
+        const checkedAt = new Date().toISOString();
+        const modelHealth = data.models.map((model) => {
+          const node = data.nodes.find((entry) => entry.id === model.nodeId);
+          const configured = model.configured ?? model.enabled;
+          const online = configured && model.enabled && node?.status === 'online';
+          return {
+            id: model.id,
+            group: model.group,
+            nodeId: model.nodeId,
+            model: model.servedModel ?? model.name,
+            endpointHost: model.endpointHost ?? node?.host ?? '',
+            status: configured
+              ? online
+                ? ('online' as const)
+                : ('offline' as const)
+              : ('unconfigured' as const),
+            modelAvailable: !!online,
+            latencyMs: online ? 12 : null,
+            advertisedModels: online
+              ? [model.servedModel ?? model.name]
+              : [],
+            checkedAt,
+            detail: online
+              ? 'The simulated local registry is available.'
+              : 'This simulated model slot is unavailable.',
+          };
+        });
+        return [
+          {
+            id: 'orchestrator',
+            group: 'ORCHESTRATOR' as const,
+            nodeId: 'control-plane',
+            model: data.orchestrator?.model ?? 'Demo orchestrator',
+            endpointHost: data.orchestrator?.endpointHost ?? 'localhost',
+            status: 'online' as const,
+            modelAvailable: true,
+            latencyMs: 8,
+            advertisedModels: [
+              data.orchestrator?.model ?? 'Demo orchestrator',
+            ],
+            checkedAt,
+            detail: 'The simulated orchestrator registry is available.',
+          },
+          ...modelHealth,
+        ];
       },
       true,
     ),

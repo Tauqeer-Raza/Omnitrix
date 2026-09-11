@@ -15,6 +15,8 @@ import { Button, PageHeader, StatusBadge, Empty } from '../components/common';
 import SovereigntyConsole from '../components/SovereigntyConsole';
 import CodeEditor, { SAMPLE_CODE } from '../components/CodeEditor';
 import AgentTimeline from '../components/AgentTimeline';
+import { API_MODE } from '../api/transport';
+import LiveTaskResult from '../components/LiveTaskResult';
 export default function CodeWorkspace() {
   const { id } = useParams();
   const { data, act } = useApp();
@@ -38,6 +40,7 @@ export default function CodeWorkspace() {
     }, 1600);
     return () => clearTimeout(timer);
   }, [execution, code]);
+  if (API_MODE === 'http') return <LiveTaskResult />;
   if (!task) return <Empty message="This coding task is unavailable." />;
   const failed = execution === 'failed' || task.status === 'failed';
   const passed =

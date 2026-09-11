@@ -2,6 +2,18 @@ import { ApiError, delay, getStore } from './store';
 export const API_MODE =
   import.meta.env.VITE_API_MODE === 'http' ? 'http' : 'mock';
 export const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+export function csrfHeaders(): Record<string, string> {
+  const csrf = document.cookie
+    .split('; ')
+    .find((item) => item.startsWith('omnitrix_csrf='))
+    ?.split('=')
+    .slice(1)
+    .join('=');
+  return {
+    'X-Requested-With': 'Omnitrix',
+    ...(csrf ? { 'X-CSRF-Token': decodeURIComponent(csrf) } : {}),
+  };
+}
 /** The only HTTP transport. Configure a same-origin FastAPI reverse proxy in production. */
 export async function endpoint<T>(
   method: string,
@@ -22,8 +34,12 @@ export async function endpoint<T>(
   const response = await fetch(`${API_BASE}${path}`, {
     method,
     credentials: 'include',
-    headers:
-      body instanceof FormData ? {} : { 'Content-Type': 'application/json' },
+    headers: {
+      ...csrfHeaders(),
+      ...(body instanceof FormData
+        ? {}
+        : { 'Content-Type': 'application/json' }),
+    },
     ...(body === undefined
       ? {}
       : { body: body instanceof FormData ? body : JSON.stringify(body) }),

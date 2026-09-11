@@ -41,6 +41,7 @@ import { useWorkbenchTools } from '../hooks/useWorkbenchTools';
 import type { Permission } from '../types';
 import OperatorNavigation from './OperatorNavigation';
 import { getConversations } from '../lib/conversations';
+import { API_MODE } from '../api/transport';
 const adminNav = [
   {
     label: 'CONTROL CENTER',
@@ -219,7 +220,7 @@ export default function Layout({ admin = false }: { admin?: boolean }) {
               <span className="status-dot" />
               LOCAL ENVIRONMENT
             </span>
-            <span className="demo-label">DEMO</span>
+            {API_MODE === 'mock' && <span className="demo-label">DEMO</span>}
             <button
               className="command-button"
               onClick={() => setSearchOpen(true)}

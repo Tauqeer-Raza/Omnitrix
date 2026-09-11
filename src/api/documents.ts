@@ -34,6 +34,13 @@ async function storeFile(id: string, file: Blob) {
   }
 }
 export const documentApi = {
+  reindex: (id: string) =>
+    endpoint<LocalDocument>('POST', `/documents/${id}/reindex`, {}, () => {
+      throw new ApiError(
+        'DEMO_ONLY',
+        'Reindexing is available in connected mode.',
+      );
+    }),
   upload: async (
     file: File,
     onProgress?: (progress: number) => void,

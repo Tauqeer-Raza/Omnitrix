@@ -28,6 +28,8 @@ import {
 import DocumentViewer, { PaperReport } from '../components/DocumentViewer';
 import AgentTimeline from '../components/AgentTimeline';
 import SovereigntyConsole from '../components/SovereigntyConsole';
+import { API_MODE } from '../api/transport';
+import LiveTaskResult from '../components/LiveTaskResult';
 export default function DocumentWorkflow() {
   const { id } = useParams();
   const { data, act } = useApp();
@@ -35,6 +37,7 @@ export default function DocumentWorkflow() {
   const [selectedDoc, setSelectedDoc] = useState('');
   const [downloading, setDownloading] = useState('');
   const navigate = useNavigate();
+  if (API_MODE === 'http') return <LiveTaskResult />;
   const task = data?.tasks.find(
     (t) => t.id === id || t.documentIds.includes(id ?? ''),
   );

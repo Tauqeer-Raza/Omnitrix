@@ -3,6 +3,7 @@ import { ArrowUp, Paperclip, ShieldCheck, X, FileText } from 'lucide-react';
 import { Button, ErrorMessage } from './common';
 import FileUploader from './FileUploader';
 import { documentApi } from '../api/documents';
+import { API_MODE } from '../api/transport';
 import type { LocalDocument } from '../types';
 
 export default function ChatComposer({
@@ -62,26 +63,28 @@ export default function ChatComposer({
             onChange={setDocuments}
             onBusy={setUploading}
           />
-          <button
-            type="button"
-            className="chat-sample"
-            disabled={uploading || documents.length >= 10}
-            onClick={async () => {
-              setError('');
-              setUploading(true);
-              try {
-                const doc = await documentApi.addSample();
-                setDocuments((d) => [...d, doc]);
-              } catch (e) {
-                setError((e as Error).message);
-              } finally {
-                setUploading(false);
-              }
-            }}
-          >
-            <FileText size={14} />
-            Try with a sample report
-          </button>
+          {API_MODE === 'mock' && (
+            <button
+              type="button"
+              className="chat-sample"
+              disabled={uploading || documents.length >= 10}
+              onClick={async () => {
+                setError('');
+                setUploading(true);
+                try {
+                  const doc = await documentApi.addSample();
+                  setDocuments((d) => [...d, doc]);
+                } catch (e) {
+                  setError((e as Error).message);
+                } finally {
+                  setUploading(false);
+                }
+              }}
+            >
+              <FileText size={14} />
+              Try with a sample report
+            </button>
+          )}
         </div>
       )}
       {!attachments && documents.length > 0 && (

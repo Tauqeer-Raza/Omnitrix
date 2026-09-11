@@ -23,34 +23,43 @@ import {
   time,
 } from '../../components/common';
 import Core from '../../components/Core';
+import { API_MODE } from '../../api/transport';
 export function UsageChart({ period = '24 hours' }: { period?: string }) {
   const { data } = useApp();
   const use = data?.users.reduce((s, u) => s + u.used, 0) ?? 0;
-  const points = (
+  const history =
     period === '7 days'
-      ? [0.2, 0.37, 0.32, 0.61, 0.45, 0.77, 0.65]
-      : [
-          0.1, 0.13, 0.11, 0.18, 0.17, 0.25, 0.23, 0.26, 0.21, 0.38, 0.32, 0.42,
-          0.62, 0.57, 0.43, 0.61, 0.52, 0.69, 0.61, 0.82, 0.73, 0.86, 0.79, 1,
-        ]
-  ).map((n) => Math.round(use * n));
+      ? data?.telemetry?.usageDaily
+      : data?.telemetry?.usageHourly;
+  const points =
+    API_MODE === 'http'
+      ? (history?.map((p) => p.tokens) ?? [0, 0])
+      : (period === '7 days'
+          ? [0.2, 0.37, 0.32, 0.61, 0.45, 0.77, 0.65]
+          : [
+              0.1, 0.13, 0.11, 0.18, 0.17, 0.25, 0.23, 0.26, 0.21, 0.38, 0.32,
+              0.42, 0.62, 0.57, 0.43, 0.61, 0.52, 0.69, 0.61, 0.82, 0.73, 0.86,
+              0.79, 1,
+            ]
+        ).map((n) => Math.round(use * n));
+  const maximum = Math.max(1, ...points);
   const path = points
     .map(
       (p, i) =>
-        `${i === 0 ? 'M' : 'L'} ${30 + i * (640 / (points.length - 1))} ${170 - (p / use) * 130}`,
+        `${i === 0 ? 'M' : 'L'} ${30 + i * (640 / Math.max(1, points.length - 1))} ${170 - (p / maximum) * 130}`,
     )
     .join(' ');
   return (
     <div className="usage-chart">
       <div className="chart-y mono">
-        <span>{number(use)}</span>
-        <span>{number(Math.round(use / 2))}</span>
+        <span>{number(maximum)}</span>
+        <span>{number(Math.round(maximum / 2))}</span>
         <span>0</span>
       </div>
       <svg
         viewBox="0 0 700 205"
         role="img"
-        aria-label={`Synthetic token usage over ${period}, ending at ${number(use)} tokens`}
+        aria-label={`${API_MODE === 'http' ? 'Recorded' : 'Synthetic'} token usage over ${period}, ending at ${number(points.at(-1) ?? 0)} tokens`}
       >
         <defs>
           <linearGradient id="usageFill" x1="0" y1="0" x2="0" y2="1">
@@ -74,15 +83,22 @@ export function UsageChart({ period = '24 hours' }: { period?: string }) {
         <path d={path} stroke="#db8a57" strokeWidth="2.5" fill="none" />
         <circle
           cx="670"
-          cy="40"
+          cy={170 - ((points.at(-1) ?? 0) / maximum) * 130}
           r="4"
           fill="#ff7e47"
           stroke="#f4f0e4"
           strokeWidth="3"
         />
-        {(period === '7 days'
-          ? ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
-          : ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', 'NOW']
+        {(API_MODE === 'http'
+          ? Array.from(
+              { length: 7 },
+              (_, i) =>
+                history?.[Math.round((i * ((history?.length ?? 1) - 1)) / 6)]
+                  ?.label ?? '',
+            )
+          : period === '7 days'
+            ? ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+            : ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', 'NOW']
         ).map((x, i) => (
           <text
             x={30 + i * 106}
@@ -91,7 +107,7 @@ export function UsageChart({ period = '24 hours' }: { period?: string }) {
             fontSize="9"
             fill="#8a9675"
             textAnchor={i === 6 ? 'end' : 'start'}
-            key={x}
+            key={`${x}-${i}`}
           >
             {x}
           </text>
@@ -127,7 +143,7 @@ export default function AdminDashboard() {
           icon={<Boxes size={16} />}
         />
         <MetricCard
-          label="MODELS ONLINE"
+          label={API_MODE === 'http' ? 'MODELS ENABLED' : 'MODELS ONLINE'}
           value={
             <Counter value={data.models.filter((m) => m.enabled).length} />
           }
@@ -161,8 +177,12 @@ export default function AdminDashboard() {
         />
         <MetricCard
           label="EXTERNAL CALLS"
-          value="0"
-          detail="Sovereignty maintained"
+          value={API_MODE === 'http' ? '—' : '0'}
+          detail={
+            API_MODE === 'http'
+              ? 'Network telemetry unavailable'
+              : 'Sovereignty maintained'
+          }
           icon={<Globe size={16} />}
           orange
         />
@@ -185,7 +205,11 @@ export default function AdminDashboard() {
               {number(usage)}
               <small>tokens consumed</small>
             </h2>
-            <span className="mono">SYNTHETIC HISTORY / LIVE TOTAL</span>
+            <span className="mono">
+              {API_MODE === 'http'
+                ? 'RECORDED USAGE / UTC'
+                : 'SYNTHETIC HISTORY / LIVE TOTAL'}
+            </span>
           </div>
           <UsageChart period={period} />
           <div className="usage-bottom">
@@ -216,7 +240,7 @@ export default function AdminDashboard() {
               <strong>4</strong>MODEL GROUPS
             </span>
             <span>
-              <strong>0</strong>EXTERNAL CALLS
+              <strong>{API_MODE === 'http' ? '—' : '0'}</strong>EXTERNAL CALLS
             </span>
           </div>
           <Link to="/admin/routing">
@@ -247,7 +271,9 @@ export default function AdminDashboard() {
                 <div className="mini-util">
                   <span style={{ width: `${n.utilization}%` }} />
                 </div>
-                <span className="mono">{n.utilization}%</span>
+                <span className="mono">
+                  {API_MODE === 'http' ? '—' : `${n.utilization}%`}
+                </span>
                 <StatusBadge status={n.status} />
               </Link>
             ))}
@@ -302,8 +328,16 @@ export function ResourcesPage() {
         />
         <MetricCard
           label="COMPUTE UTILIZATION"
-          value={`${Math.round(data.nodes.reduce((s, n) => s + n.utilization, 0) / Math.max(1, data.nodes.length))}%`}
-          detail="Across registered nodes"
+          value={
+            API_MODE === 'http'
+              ? '—'
+              : `${Math.round(data.nodes.reduce((s, n) => s + n.utilization, 0) / Math.max(1, data.nodes.length))}%`
+          }
+          detail={
+            API_MODE === 'http'
+              ? 'Telemetry not configured'
+              : 'Across registered nodes'
+          }
           icon={<Cpu size={15} />}
         />
         <MetricCard
@@ -315,7 +349,11 @@ export function ResourcesPage() {
         <MetricCard
           label="LOCAL REQUESTS"
           value={data.localRequests}
-          detail="No external requests"
+          detail={
+            API_MODE === 'http'
+              ? 'Recorded model calls'
+              : 'No external requests'
+          }
           icon={<Server size={15} />}
           orange
         />
@@ -334,8 +372,9 @@ export function ResourcesPage() {
         />
         <UsageChart period={period} />
         <p className="note">
-          Historical distribution is synthetic; the current total reflects demo
-          task completion.
+          {API_MODE === 'http'
+            ? 'UTC usage from the SQL ledger. Provider-reported tokens are used where available; otherwise usage is estimated.'
+            : 'Historical distribution is synthetic; the current total reflects demo task completion.'}
         </p>
       </section>
       <div className="two-columns resource-breakdown">
@@ -368,7 +407,7 @@ export function ResourcesPage() {
                 <span>
                   {n.activeTasks} active tasks / {n.capacity} capacity
                 </span>
-                <b>{n.utilization}%</b>
+                <b>{API_MODE === 'http' ? '—' : `${n.utilization}%`}</b>
               </div>
               <div className="capacity-track">
                 <i style={{ width: `${n.utilization}%` }} />

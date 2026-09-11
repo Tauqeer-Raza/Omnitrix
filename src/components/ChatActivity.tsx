@@ -9,6 +9,8 @@ export function activityLabel(task: Task) {
   if (task.status === 'queued') return 'Getting started';
   if (task.status === 'failed') return 'This request needs attention';
   if (task.status === 'completed') return 'Your response is ready';
+  if (task.plan?.steps[task.step]?.label)
+    return task.plan.steps[task.step].label;
   if (task.step < 2) return 'Understanding your request';
   if (task.step < 4)
     return task.type === 'document'
@@ -58,7 +60,13 @@ export default function ChatActivity({ task }: { task: Task }) {
           <span>{paused ? 'Local service paused' : activityLabel(task)}</span>
         </div>
         <Progress
-          value={Math.max(4, Math.min(100, (task.step + 1) * 12.5))}
+          value={Math.max(
+            4,
+            Math.min(
+              100,
+              ((task.step + 1) / (task.plan?.steps.length ?? 8)) * 100,
+            ),
+          )}
           aria-label="Request progress"
         />
         <div className="chat-progress-steps">
@@ -85,13 +93,43 @@ export default function ChatActivity({ task }: { task: Task }) {
       {details && (
         <div className="chat-technical-details">
           <p>
+            <b>Orchestrator</b>
+            {data?.orchestrator?.model || 'Not configured'}
+          </p>
+          <p>
             <b>Selected model</b>
-            {data?.models.find((m) => m.id === task.modelId)?.name}
+            {task.route?.selectedModel ||
+              data?.models.find((m) => m.id === task.modelId)?.name ||
+              'Waiting for routing'}
           </p>
           <p>
             <b>Compute node</b>
             {data?.nodes.find((n) => n.id === task.nodeId)?.name}
           </p>
+          {task.plan?.routingReason && (
+            <p>
+              <b>Routing reason</b>
+              {task.plan.routingReason}
+            </p>
+          )}
+          {task.plan?.classificationSource && (
+            <p>
+              <b>Classification</b>
+              {task.plan.classificationSource === 'control_plane_guardrail'
+                ? `Control plane corrected ${task.plan.orchestratorType ?? 'the model proposal'} → ${task.plan.type}`
+                : task.plan.classificationSource === 'control_plane_recovery'
+                  ? `Control plane recovered invalid orchestrator output → ${task.plan.type}`
+                  : 'Orchestrator decision accepted'}
+            </p>
+          )}
+          {task.plan?.requestedCapabilities.length ? (
+            <p>
+              <b>Planned capabilities</b>
+              {task.plan.requestedCapabilities
+                .map((capability) => capability.replaceAll('_', ' '))
+                .join(' · ')}
+            </p>
+          ) : null}
           {task.events.slice(-5).map((event) => (
             <p key={event.id}>{event.message}</p>
           ))}
