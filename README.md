@@ -2,12 +2,16 @@
 
 A React 19 + TypeScript frontend and a FastAPI backend for a local agentic AI workbench. The frontend preserves its standalone demo mode. `BACKEND/` implements the control plane, authenticated APIs, orchestration, local document retrieval, streaming responses, usage accounting and administration, following the Jetson TX2 → private LAN → three inference-worker architecture.
 
+Read [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) for the complete architecture and implementation handover. Read [INSTALLATION.md](INSTALLATION.md) to install a clean clone on another device.
+
+The 13 September inspection update adds page evidence, governed SOP comparisons, reviewed DOCX/PDF approval notes, and bounded code/evidence repair loops. See [the workflow, configuration, acceptance checks and architecture](docs/INSPECTION_WORKFLOW.md).
+
 ## Use the FastAPI backend
 
 See [BACKEND/README.md](BACKEND/README.md) for complete Windows/Linux setup, model protocols, account provisioning and deployment. Python 3.11+ is required. Model endpoints and keys are blank in [BACKEND/.env.example](BACKEND/.env.example), with an ignored `.env` prepared for this workspace.
 
 ```powershell
-cd D:\Omnitrix\BACKEND
+cd D:\Omnitrix_Latest\BACKEND
 # A Python 3.13 .venv is already installed in this workspace; do not recreate it.
 .\.venv\Scripts\python.exe -m app.cli create-admin --email admin@omnitrix.local
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1
